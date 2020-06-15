@@ -35,3 +35,6 @@ CMakeLists.txt.user
 
 .vscode
 build
+
+# user file (not necessary)
+imgui.ini

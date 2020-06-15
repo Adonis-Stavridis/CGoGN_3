@@ -33,6 +33,7 @@
 #include <cgogn/ui/modules/surface_render/surface_render.h>
 #include <cgogn/ui/modules/surface_render_vector/surface_render_vector.h>
 #include <cgogn/ui/modules/surface_selection/surface_selection.h>
+#include <cgogn/ui/modules/surface_tools/surface_tools.h>
 
 #define DEFAULT_MESH_PATH CGOGN_STR(CGOGN_DATA_PATH) "/meshes/"
 
@@ -68,6 +69,7 @@ int main(int argc, char** argv)
 	cgogn::ui::SurfaceDifferentialProperties<Mesh> sdp(app);
 	cgogn::ui::SurfaceModeling<Mesh> sm(app);
 	cgogn::ui::SurfaceSelection<Mesh> ss(app);
+	cgogn::ui::SurfaceTools<Mesh> st(app);
 
 	app.init_modules();
 
@@ -76,6 +78,7 @@ int main(int argc, char** argv)
 	v1->link_module(&sr);
 	v1->link_module(&srv);
 	v1->link_module(&ss);
+	v1->link_module(&st);
 
 	Mesh* m = mp.load_surface_from_file(filename);
 	if (!m)
