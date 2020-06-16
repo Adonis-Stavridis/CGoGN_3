@@ -61,6 +61,11 @@ public:
 		return uint32(cells_.size());
 	}
 
+	bool empty() const
+	{
+		return (cells_.empty());
+	}
+
 	inline void select(CELL c)
 	{
 		if (!marker_.is_marked(c))
