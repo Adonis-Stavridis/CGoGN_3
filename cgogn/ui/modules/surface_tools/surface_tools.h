@@ -528,6 +528,25 @@ protected:
 					need_update |= ImGui::ColorEdit3("color##vertices", p.param_point_sprite_->color_.data(),
 													 ImGuiColorEditFlags_NoInputs);
 					need_update |= ImGui::SliderFloat("size##vertices", &(p.vertex_scale_factor_), 0.1f, 2.0f);
+
+					if (p.selected_vertices_set_ && !p.selected_vertices_set_->empty())
+					{
+						ImGui::Separator();
+						ImGui::TextUnformatted("Vertex Tools");
+
+						std::vector<Vec3> posVector;
+						p.selected_vertices_set_->foreach_cell(
+							[&](Vertex v) { posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v)); });
+
+						Vec3 position = Vec3();
+						for (Vec3 value : posVector)
+							position += value;
+						position /= position.size();
+
+						float positionArr[3] = {(float)position.x(), (float)position.y(), (float)position.z()};
+
+						ImGui::InputFloat3("Translation", &positionArr[0], 2);
+					}
 				}
 				else if (p.selecting_cell_ == EdgeSelect)
 				{
@@ -560,6 +579,16 @@ protected:
 					need_update |=
 						ImGui::ColorEdit3("color##edges", p.param_edge_->color_.data(), ImGuiColorEditFlags_NoInputs);
 					need_update |= ImGui::SliderFloat("width##edges", &(p.param_edge_->width_), 1.0f, 10.0f);
+
+					if (p.selected_edges_set_ && !p.selected_edges_set_->empty())
+					{
+						ImGui::Separator();
+						ImGui::TextUnformatted("Edge Tools");
+						float v[3] = {0.0f, 0.0f, 0.0f};
+						ImGui::InputFloat3("Translation", &v[0], 2);
+						ImGui::InputFloat3("Rotation", &v[0], 2);
+						ImGui::InputFloat3("Scale", &v[0], 2);
+					}
 				}
 				else if (p.selecting_cell_ == FaceSelect)
 				{
@@ -591,6 +620,16 @@ protected:
 					ImGui::TextUnformatted("Drawing parameters");
 					need_update |= ImGui::ColorEdit3("front color##flat", p.param_flat_->front_color_.data(),
 													 ImGuiColorEditFlags_NoInputs);
+
+					if (p.selected_faces_set_ && !p.selected_faces_set_->empty())
+					{
+						ImGui::Separator();
+						ImGui::TextUnformatted("Face Tools");
+						float v[3] = {0.0f, 0.0f, 0.0f};
+						ImGui::InputFloat3("Translation", &v[0], 2);
+						ImGui::InputFloat3("Rotation", &v[0], 2);
+						ImGui::InputFloat3("Scale", &v[0], 2);
+					}
 				}
 			}
 		}
