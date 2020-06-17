@@ -535,6 +535,7 @@ protected:
 						ImGui::TextUnformatted("Vertex Tools");
 
 						std::vector<Vec3> posVector;
+						posVector.reserve(p.selected_vertices_set_->size());
 						p.selected_vertices_set_->foreach_cell(
 							[&](Vertex v) { posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v)); });
 
@@ -588,10 +589,27 @@ protected:
 					{
 						ImGui::Separator();
 						ImGui::TextUnformatted("Edge Tools");
-						float v[3] = {0.0f, 0.0f, 0.0f};
-						ImGui::InputFloat3("Translation", &v[0], 2);
-						ImGui::InputFloat3("Rotation", &v[0], 2);
-						ImGui::InputFloat3("Scale", &v[0], 2);
+
+						std::vector<Vec3> posVector;
+						posVector.reserve(p.selected_edges_set_->size() * 2);
+						p.selected_edges_set_->foreach_cell([&](Edge e) {
+							std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
+							posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, vertices[0]));
+							posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, vertices[1]));
+						});
+
+						float position[3] = {0.0f, 0.0f, 0.0f};
+						for (Vec3 value : posVector)
+						{
+							position[0] += (float)value.x();
+							position[1] += (float)value.y();
+							position[2] += (float)value.z();
+						}
+						position[0] /= p.selected_edges_set_->size();
+						position[1] /= p.selected_edges_set_->size();
+						position[2] /= p.selected_edges_set_->size();
+
+						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
 				}
 				else if (p.selecting_cell_ == FaceSelect)
@@ -628,11 +646,29 @@ protected:
 					if (p.selected_faces_set_ && !p.selected_faces_set_->empty())
 					{
 						ImGui::Separator();
-						ImGui::TextUnformatted("Face Tools");
-						float v[3] = {0.0f, 0.0f, 0.0f};
-						ImGui::InputFloat3("Translation", &v[0], 2);
-						ImGui::InputFloat3("Rotation", &v[0], 2);
-						ImGui::InputFloat3("Scale", &v[0], 2);
+						ImGui::TextUnformatted("Faces Tools");
+
+						std::vector<Vec3> posVector;
+						posVector.reserve(p.selected_faces_set_->size() * 3);
+						p.selected_faces_set_->foreach_cell([&](Face f) {
+							foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+								posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v));
+								return true;
+							});
+						});
+
+						float position[3] = {0.0f, 0.0f, 0.0f};
+						for (Vec3 value : posVector)
+						{
+							position[0] += (float)value.x();
+							position[1] += (float)value.y();
+							position[2] += (float)value.z();
+						}
+						position[0] /= p.selected_faces_set_->size();
+						position[1] /= p.selected_faces_set_->size();
+						position[2] /= p.selected_faces_set_->size();
+
+						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
 				}
 			}
