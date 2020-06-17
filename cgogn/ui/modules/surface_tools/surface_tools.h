@@ -538,14 +538,18 @@ protected:
 						p.selected_vertices_set_->foreach_cell(
 							[&](Vertex v) { posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v)); });
 
-						Vec3 position = Vec3();
+						float position[3] = {0.0f, 0.0f, 0.0f};
 						for (Vec3 value : posVector)
-							position += value;
-						position /= position.size();
+						{
+							position[0] += (float)value.x();
+							position[1] += (float)value.y();
+							position[2] += (float)value.z();
+						}
+						position[0] /= p.selected_vertices_set_->size();
+						position[1] /= p.selected_vertices_set_->size();
+						position[2] /= p.selected_vertices_set_->size();
 
-						float positionArr[3] = {(float)position.x(), (float)position.y(), (float)position.z()};
-
-						ImGui::InputFloat3("Translation", &positionArr[0], 2);
+						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
 				}
 				else if (p.selecting_cell_ == EdgeSelect)
