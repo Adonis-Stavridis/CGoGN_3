@@ -109,11 +109,12 @@ class SurfaceTools : public ViewModule
 		{
 			if (selected_vertices_set_)
 			{
-				std::vector<Vec3> selected_vertices_position;
-				selected_vertices_position.reserve(selected_vertices_set_->size());
+				std::vector<Vec3> temp_position;
+				temp_position.reserve(selected_vertices_set_->size());
 				selected_vertices_set_->foreach_cell(
-					[&](Vertex v) { selected_vertices_position.push_back(value<Vec3>(*mesh_, vertex_position_, v)); });
-				rendering::update_vbo(selected_vertices_position, &selected_vertices_vbo_);
+					[&](Vertex v) { temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v)); });
+				rendering::update_vbo(temp_position, &selected_vertices_vbo_);
+				selected_vertices_position_.swap(temp_position);
 			}
 		}
 
@@ -121,14 +122,15 @@ class SurfaceTools : public ViewModule
 		{
 			if (selected_edges_set_)
 			{
-				std::vector<Vec3> selected_edges_position;
-				selected_edges_position.reserve(selected_edges_set_->size() * 2);
+				std::vector<Vec3> temp_position;
+				temp_position.reserve(selected_edges_set_->size() * 2);
 				selected_edges_set_->foreach_cell([&](Edge e) {
 					std::vector<Vertex> vertices = incident_vertices(*mesh_, e);
-					selected_edges_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[0]));
-					selected_edges_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[1]));
+					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[0]));
+					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[1]));
 				});
-				rendering::update_vbo(selected_edges_position, &selected_edges_vbo_);
+				rendering::update_vbo(temp_position, &selected_edges_vbo_);
+				selected_edges_position_.swap(temp_position);
 			}
 		}
 
@@ -136,15 +138,16 @@ class SurfaceTools : public ViewModule
 		{
 			if (selected_faces_set_)
 			{
-				std::vector<Vec3> selected_faces_position;
-				selected_faces_position.reserve(selected_faces_set_->size() * 3); // TODO: manage polygonal faces
+				std::vector<Vec3> temp_position;
+				temp_position.reserve(selected_faces_set_->size() * 3); // TODO: manage polygonal faces
 				selected_faces_set_->foreach_cell([&](Face f) {
 					foreach_incident_vertex(*mesh_, f, [&](Vertex v) -> bool {
-						selected_faces_position.push_back(value<Vec3>(*mesh_, vertex_position_, v));
+						temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v));
 						return true;
 					});
 				});
-				rendering::update_vbo(selected_faces_position, &selected_faces_vbo_);
+				rendering::update_vbo(temp_position, &selected_faces_vbo_);
+				selected_faces_position_.swap(temp_position);
 			}
 		}
 
@@ -166,6 +169,10 @@ class SurfaceTools : public ViewModule
 		CellsSet<MESH, Vertex>* selected_vertices_set_;
 		CellsSet<MESH, Edge>* selected_edges_set_;
 		CellsSet<MESH, Face>* selected_faces_set_;
+
+		std::vector<Vec3> selected_vertices_position_;
+		std::vector<Vec3> selected_edges_position_;
+		std::vector<Vec3> selected_faces_position_;
 
 		SelectingCell selecting_cell_;
 		SelectionMethod selection_method_;
@@ -534,21 +541,16 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Vertex Tools");
 
-						std::vector<Vec3> posVector;
-						posVector.reserve(p.selected_vertices_set_->size());
-						p.selected_vertices_set_->foreach_cell(
-							[&](Vertex v) { posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v)); });
-
 						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : posVector)
+						for (Vec3 value : p.selected_vertices_position_)
 						{
 							position[0] += (float)value.x();
 							position[1] += (float)value.y();
 							position[2] += (float)value.z();
 						}
-						position[0] /= p.selected_vertices_set_->size();
-						position[1] /= p.selected_vertices_set_->size();
-						position[2] /= p.selected_vertices_set_->size();
+						position[0] /= p.selected_vertices_position_.size();
+						position[1] /= p.selected_vertices_position_.size();
+						position[2] /= p.selected_vertices_position_.size();
 
 						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
@@ -590,24 +592,16 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Edge Tools");
 
-						std::vector<Vec3> posVector;
-						posVector.reserve(p.selected_edges_set_->size() * 2);
-						p.selected_edges_set_->foreach_cell([&](Edge e) {
-							std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
-							posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, vertices[0]));
-							posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, vertices[1]));
-						});
-
 						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : posVector)
+						for (Vec3 value : p.selected_edges_position_)
 						{
 							position[0] += (float)value.x();
 							position[1] += (float)value.y();
 							position[2] += (float)value.z();
 						}
-						position[0] /= p.selected_edges_set_->size();
-						position[1] /= p.selected_edges_set_->size();
-						position[2] /= p.selected_edges_set_->size();
+						position[0] /= p.selected_edges_position_.size();
+						position[1] /= p.selected_edges_position_.size();
+						position[2] /= p.selected_edges_position_.size();
 
 						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
@@ -648,25 +642,16 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Faces Tools");
 
-						std::vector<Vec3> posVector;
-						posVector.reserve(p.selected_faces_set_->size() * 3);
-						p.selected_faces_set_->foreach_cell([&](Face f) {
-							foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
-								posVector.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v));
-								return true;
-							});
-						});
-
 						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : posVector)
+						for (Vec3 value : p.selected_faces_position_)
 						{
 							position[0] += (float)value.x();
 							position[1] += (float)value.y();
 							position[2] += (float)value.z();
 						}
-						position[0] /= p.selected_faces_set_->size();
-						position[1] /= p.selected_faces_set_->size();
-						position[2] /= p.selected_faces_set_->size();
+						position[0] /= p.selected_faces_position_.size();
+						position[1] /= p.selected_faces_position_.size();
+						position[2] /= p.selected_faces_position_.size();
 
 						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
 					}
