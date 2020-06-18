@@ -552,7 +552,23 @@ protected:
 						position[1] /= p.selected_vertices_position_.size();
 						position[2] /= p.selected_vertices_position_.size();
 
-						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
+						float old_position[3];
+						std::copy(std::begin(position), std::end(position), std::begin(old_position));
+
+						bool update_flag = false;
+						update_flag |= ImGui::InputFloat3("Translation", &position[0], 2);
+						need_update |= update_flag;
+
+						if (update_flag)
+						{
+							for (size_t i = 0; i < p.selected_vertices_position_.size(); i++)
+							{
+								p.selected_vertices_position_[i].x() += position[0] - old_position[0];
+								p.selected_vertices_position_[i].y() += position[1] - old_position[1];
+								p.selected_vertices_position_[i].z() += position[2] - old_position[2];
+							}
+							rendering::update_vbo(p.selected_vertices_position_, &p.selected_vertices_vbo_);
+						}
 					}
 				}
 				else if (p.selecting_cell_ == EdgeSelect)
@@ -603,7 +619,23 @@ protected:
 						position[1] /= p.selected_edges_position_.size();
 						position[2] /= p.selected_edges_position_.size();
 
-						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
+						float old_position[3];
+						std::copy(std::begin(position), std::end(position), std::begin(old_position));
+
+						bool update_flag = false;
+						update_flag |= ImGui::InputFloat3("Translation", &position[0], 2);
+						need_update |= update_flag;
+
+						if (update_flag)
+						{
+							for (size_t i = 0; i < p.selected_edges_position_.size(); i++)
+							{
+								p.selected_edges_position_[i].x() += position[0] - old_position[0];
+								p.selected_edges_position_[i].y() += position[1] - old_position[1];
+								p.selected_edges_position_[i].z() += position[2] - old_position[2];
+							}
+							rendering::update_vbo(p.selected_edges_position_, &p.selected_edges_vbo_);
+						}
 					}
 				}
 				else if (p.selecting_cell_ == FaceSelect)
@@ -653,7 +685,23 @@ protected:
 						position[1] /= p.selected_faces_position_.size();
 						position[2] /= p.selected_faces_position_.size();
 
-						need_update |= ImGui::InputFloat3("Translation", &position[0], 2);
+						float old_position[3];
+						std::copy(std::begin(position), std::end(position), std::begin(old_position));
+
+						bool update_flag = false;
+						update_flag |= ImGui::InputFloat3("Translation", &position[0], 2);
+						need_update |= update_flag;
+
+						if (update_flag)
+						{
+							for (size_t i = 0; i < p.selected_faces_position_.size(); i++)
+							{
+								p.selected_faces_position_[i].x() += position[0] - old_position[0];
+								p.selected_faces_position_[i].y() += position[1] - old_position[1];
+								p.selected_faces_position_[i].z() += position[2] - old_position[2];
+							}
+							rendering::update_vbo(p.selected_faces_position_, &p.selected_faces_vbo_);
+						}
 					}
 				}
 			}
