@@ -561,13 +561,12 @@ protected:
 
 						if (update_flag)
 						{
-							for (size_t i = 0; i < p.selected_vertices_position_.size(); i++)
-							{
-								p.selected_vertices_position_[i].x() += position[0] - old_position[0];
-								p.selected_vertices_position_[i].y() += position[1] - old_position[1];
-								p.selected_vertices_position_[i].z() += position[2] - old_position[2];
-							}
-							rendering::update_vbo(p.selected_vertices_position_, &p.selected_vertices_vbo_);
+							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
+													position[2] - old_position[2]);
+
+							p.selected_vertices_set_->foreach_cell(
+								[&](Vertex v) { value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation; });
+							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 						}
 					}
 				}
@@ -628,13 +627,15 @@ protected:
 
 						if (update_flag)
 						{
-							for (size_t i = 0; i < p.selected_edges_position_.size(); i++)
-							{
-								p.selected_edges_position_[i].x() += position[0] - old_position[0];
-								p.selected_edges_position_[i].y() += position[1] - old_position[1];
-								p.selected_edges_position_[i].z() += position[2] - old_position[2];
-							}
-							rendering::update_vbo(p.selected_edges_position_, &p.selected_edges_vbo_);
+							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
+													position[2] - old_position[2]);
+
+							p.selected_edges_set_->foreach_cell([&](Edge e) {
+								std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
+								value<Vec3>(*p.mesh_, p.vertex_position_, vertices[0]) += translation;
+								value<Vec3>(*p.mesh_, p.vertex_position_, vertices[1]) += translation;
+							});
+							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 						}
 					}
 				}
@@ -694,13 +695,16 @@ protected:
 
 						if (update_flag)
 						{
-							for (size_t i = 0; i < p.selected_faces_position_.size(); i++)
-							{
-								p.selected_faces_position_[i].x() += position[0] - old_position[0];
-								p.selected_faces_position_[i].y() += position[1] - old_position[1];
-								p.selected_faces_position_[i].z() += position[2] - old_position[2];
-							}
-							rendering::update_vbo(p.selected_faces_position_, &p.selected_faces_vbo_);
+							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
+													position[2] - old_position[2]);
+
+							p.selected_faces_set_->foreach_cell([&](Face f) {
+								foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+									value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+									return true;
+								});
+							});
+							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 						}
 					}
 				}
@@ -725,3 +729,12 @@ private:
 } // namespace cgogn
 
 #endif // CGOGN_MODULE_SURFACE_TOOLS_H_
+
+// Vertex v = ...
+// value<Vec3>(*m,position,v) = Vec3(0,0,0)
+// emit_attribute_changed(&m, vertex_attribute)
+
+// cut edge
+// collapse edge
+// add face
+// phi2_sew
