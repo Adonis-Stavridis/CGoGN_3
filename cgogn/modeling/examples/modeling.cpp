@@ -53,14 +53,14 @@ int main(int argc, char** argv)
 
 	std::string filename;
 	if (argc < 2)
-		filename = std::string(DEFAULT_MESH_PATH) + std::string("off/socket.off");
+		filename = std::string(DEFAULT_MESH_PATH) + std::string("off/cube.off");
 	else
 		filename = std::string(argv[1]);
 
 	cgogn::thread_start();
 
 	cgogn::ui::App app;
-	app.set_window_title("Subdivision");
+	app.set_window_title("Modeling");
 	app.set_window_size(1000, 800);
 
 	cgogn::ui::MeshProvider<Mesh> mp(app);
