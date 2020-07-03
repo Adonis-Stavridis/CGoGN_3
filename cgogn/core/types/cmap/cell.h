@@ -29,6 +29,8 @@
 #include <cgogn/core/utils/assert.h>
 #include <cgogn/core/utils/numerics.h>
 
+#include <cgogn/geometry/types/vector_traits.h>
+
 /**
  * \file cgogn/core/types/cmap/cell.h
  * \brief Orbit and cell definitions used in cgogn.
@@ -144,6 +146,16 @@ struct Cell
 	}
 
 	/**
+	 * \brief Tests equality between two cells
+	 * \param[out] boolean value of comparison
+	 * \param[in] rhs the cell to compare with
+	 */
+	inline bool operator==(const Self& rhs) const
+	{
+		return (this->dart.index == rhs.dart.index);
+	}
+
+	/**
 	 * \brief Prints a cell to a stream.
 	 * \param[out] out the stream to print on
 	 * \param[in] rhs the cell to print
@@ -162,6 +174,34 @@ struct Cell
 	{
 		in >> rhs.dart;
 		return in;
+	}
+};
+
+class Vec3Ext : public Eigen::Vector3d
+{
+public:
+	Vec3Ext(const Eigen::Vector3d& vec) : Eigen::Vector3d(vec)
+	{
+	}
+
+	inline bool operator==(const Eigen::Vector3d& vec) const
+	{
+		return (this->x() == vec.x() && this->y() == vec.y() && this->z() == vec.z());
+	}
+};
+
+class Vec3ExtHashFunction
+{
+public:
+	size_t operator()(const Vec3Ext& vec) const
+	{
+		std::hash<int> hasher;
+		size_t seed = 0;
+		for (int i = 0; i < vec.size(); i++)
+		{
+			seed ^= hasher(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		}
+		return seed;
 	}
 };
 

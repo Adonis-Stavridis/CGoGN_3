@@ -43,6 +43,7 @@
 #include <boost/synapse/connect.hpp>
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace cgogn
 {
@@ -91,7 +92,7 @@ class SurfaceTools : public ViewModule
 
 			param_edge_ = rendering::ShaderBoldLine::generate_param();
 			param_edge_->color_ = rendering::GLColor(1, 0, 0, 0.65f);
-			param_edge_->width_ = 2.0f;
+			param_edge_->width_ = 10.0f;
 			param_edge_->set_vbos({&selected_edges_vbo_});
 
 			param_flat_ = rendering::ShaderFlat::generate_param();
@@ -630,11 +631,25 @@ protected:
 							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
 													position[2] - old_position[2]);
 
+							std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
+							std::vector<Vertex> to_translate_vector;
 							p.selected_edges_set_->foreach_cell([&](Edge e) {
 								std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
-								value<Vec3>(*p.mesh_, p.vertex_position_, vertices[0]) += translation;
-								value<Vec3>(*p.mesh_, p.vertex_position_, vertices[1]) += translation;
+								for (Vertex v : vertices)
+								{
+									Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
+									if (to_translate_set.insert(tempVector).second)
+									{
+										to_translate_vector.push_back(v);
+									}
+								}
 							});
+
+							for (Vertex v : to_translate_vector)
+							{
+								value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+							}
+
 							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 						}
 					}
@@ -698,12 +713,24 @@ protected:
 							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
 													position[2] - old_position[2]);
 
+							std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
+							std::vector<Vertex> to_translate_vector;
 							p.selected_faces_set_->foreach_cell([&](Face f) {
 								foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
-									value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+									Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
+									if (to_translate_set.insert(tempVector).second)
+									{
+										to_translate_vector.push_back(v);
+									}
 									return true;
 								});
 							});
+
+							for (Vertex v : to_translate_vector)
+							{
+								value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+							}
+
 							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 						}
 					}
