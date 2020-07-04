@@ -244,6 +244,84 @@ private:
 				}));
 	}
 
+	void set_position(std::vector<Vec3> vec, float array[3])
+	{
+		array[0] = 0.0f;
+		array[1] = 0.0f;
+		array[2] = 0.0f;
+
+		for (Vec3 value : vec)
+		{
+			array[0] += (float)value.x();
+			array[1] += (float)value.y();
+			array[2] += (float)value.z();
+		}
+
+		int size = vec.size();
+		array[0] /= size;
+		array[1] /= size;
+		array[2] /= size;
+	}
+
+	void translate(const MESH& m, float old_position[3], float position[3])
+	{
+		if (old_position[0] == position[0] && old_position[1] == position[1] && old_position[2] == position[2])
+			return;
+
+		Parameters& p = parameters_[&m];
+
+		Vec3 translation(position[0] - old_position[0], position[1] - old_position[1], position[2] - old_position[2]);
+
+		if (p.selecting_cell_ == VertexSelect)
+		{
+			p.selected_vertices_set_->foreach_cell(
+				[&](Vertex v) { value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation; });
+		}
+		else if (p.selecting_cell_ == EdgeSelect)
+		{
+			std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
+			std::vector<Vertex> to_translate_vector;
+			p.selected_edges_set_->foreach_cell([&](Edge e) {
+				std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
+				for (Vertex v : vertices)
+				{
+					Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
+					if (to_translate_set.insert(tempVector).second)
+					{
+						to_translate_vector.push_back(v);
+					}
+				}
+			});
+
+			for (Vertex v : to_translate_vector)
+			{
+				value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+			}
+		}
+		else if (p.selecting_cell_ == FaceSelect)
+		{
+			std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
+			std::vector<Vertex> to_translate_vector;
+			p.selected_faces_set_->foreach_cell([&](Face f) {
+				foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+					Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
+					if (to_translate_set.insert(tempVector).second)
+					{
+						to_translate_vector.push_back(v);
+					}
+					return true;
+				});
+			});
+
+			for (Vertex v : to_translate_vector)
+			{
+				value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+			}
+		}
+
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+	}
+
 public:
 	void set_vertex_position(const MESH& m, const std::shared_ptr<Attribute<Vec3>>& vertex_position)
 	{
@@ -542,16 +620,8 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Vertex Tools");
 
-						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : p.selected_vertices_position_)
-						{
-							position[0] += (float)value.x();
-							position[1] += (float)value.y();
-							position[2] += (float)value.z();
-						}
-						position[0] /= p.selected_vertices_position_.size();
-						position[1] /= p.selected_vertices_position_.size();
-						position[2] /= p.selected_vertices_position_.size();
+						float position[3];
+						set_position(p.selected_vertices_position_, position);
 
 						float old_position[3];
 						std::copy(std::begin(position), std::end(position), std::begin(old_position));
@@ -562,12 +632,7 @@ protected:
 
 						if (update_flag)
 						{
-							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
-													position[2] - old_position[2]);
-
-							p.selected_vertices_set_->foreach_cell(
-								[&](Vertex v) { value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation; });
-							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+							translate(*p.mesh_, old_position, position);
 						}
 					}
 				}
@@ -608,16 +673,8 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Edge Tools");
 
-						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : p.selected_edges_position_)
-						{
-							position[0] += (float)value.x();
-							position[1] += (float)value.y();
-							position[2] += (float)value.z();
-						}
-						position[0] /= p.selected_edges_position_.size();
-						position[1] /= p.selected_edges_position_.size();
-						position[2] /= p.selected_edges_position_.size();
+						float position[3];
+						set_position(p.selected_edges_position_, position);
 
 						float old_position[3];
 						std::copy(std::begin(position), std::end(position), std::begin(old_position));
@@ -628,29 +685,7 @@ protected:
 
 						if (update_flag)
 						{
-							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
-													position[2] - old_position[2]);
-
-							std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
-							std::vector<Vertex> to_translate_vector;
-							p.selected_edges_set_->foreach_cell([&](Edge e) {
-								std::vector<Vertex> vertices = incident_vertices(*p.mesh_, e);
-								for (Vertex v : vertices)
-								{
-									Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
-									if (to_translate_set.insert(tempVector).second)
-									{
-										to_translate_vector.push_back(v);
-									}
-								}
-							});
-
-							for (Vertex v : to_translate_vector)
-							{
-								value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
-							}
-
-							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+							translate(*p.mesh_, old_position, position);
 						}
 					}
 				}
@@ -690,16 +725,8 @@ protected:
 						ImGui::Separator();
 						ImGui::TextUnformatted("Faces Tools");
 
-						float position[3] = {0.0f, 0.0f, 0.0f};
-						for (Vec3 value : p.selected_faces_position_)
-						{
-							position[0] += (float)value.x();
-							position[1] += (float)value.y();
-							position[2] += (float)value.z();
-						}
-						position[0] /= p.selected_faces_position_.size();
-						position[1] /= p.selected_faces_position_.size();
-						position[2] /= p.selected_faces_position_.size();
+						float position[3];
+						set_position(p.selected_faces_position_, position);
 
 						float old_position[3];
 						std::copy(std::begin(position), std::end(position), std::begin(old_position));
@@ -710,28 +737,7 @@ protected:
 
 						if (update_flag)
 						{
-							Vec3 translation = Vec3(position[0] - old_position[0], position[1] - old_position[1],
-													position[2] - old_position[2]);
-
-							std::unordered_set<Vec3Ext, Vec3ExtHashFunction> to_translate_set;
-							std::vector<Vertex> to_translate_vector;
-							p.selected_faces_set_->foreach_cell([&](Face f) {
-								foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
-									Vec3Ext tempVector = (Vec3Ext)value<Vec3>(*p.mesh_, p.vertex_position_, v);
-									if (to_translate_set.insert(tempVector).second)
-									{
-										to_translate_vector.push_back(v);
-									}
-									return true;
-								});
-							});
-
-							for (Vertex v : to_translate_vector)
-							{
-								value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
-							}
-
-							mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+							translate(*p.mesh_, old_position, position);
 						}
 					}
 				}
