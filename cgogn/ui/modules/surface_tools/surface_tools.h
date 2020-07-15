@@ -112,8 +112,9 @@ class SurfaceTools : public ViewModule
 			{
 				std::vector<Vec3> temp_position;
 				temp_position.reserve(selected_vertices_set_->size());
-				selected_vertices_set_->foreach_cell(
-					[&](Vertex v) { temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v)); });
+				selected_vertices_set_->foreach_cell([&](Vertex v) {
+					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v));
+				});
 				rendering::update_vbo(temp_position, &selected_vertices_vbo_);
 				selected_vertices_position_.swap(temp_position);
 			}
@@ -320,6 +321,98 @@ private:
 		}
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+	}
+
+	void extrude(MESH& m)
+	{
+		Parameters& p = parameters_[&m];
+		std::queue<Dart> base;
+
+		p.selected_faces_set_->foreach_cell([&](Face f) {
+			// Dart it = phi1(m, f.dart);
+			// while (it != f.dart)
+			// {
+			// 	base.push(phi2(m, it));
+			// 	Dart next = phi1(m, it);
+			// 	phi2_unsew(m, it);
+			// 	it = next;
+			// }
+			// base.push(phi2(m, it));
+			// phi2_unsew(m, f.dart);
+
+			mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+			mesh_provider_->emit_connectivity_changed(selected_mesh_);
+
+			// Vec3 translation(10.0f, 0.0f, 0.0f);
+			// foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+			// 	std::cout << phi2(m, v.dart) << std::endl;
+			// 	value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
+			// 	return true;
+			// });
+
+			// Dart newit = phi1(m, f.dart);
+			// while (newit != f.dart)
+			// {
+			// 	Dart next = phi1(m, newit);
+			// 	phi2_sew(m, newit, base.front());
+			// 	base.pop();
+			// 	newit = next;
+			// }
+			// phi2_sew(m, f.dart, base.front());
+			// base.pop();
+		});
+
+		// TODO : CUBE
+		// std::vector<Face> faces;
+		// faces.reserve(12);
+
+		// for (int i = 0; i < 12; i++)
+		// {
+		// 	faces.push_back(add_face(m, 3, true));
+		// }
+
+		// std::vector<Vec3> vertices{Vec3(-20.0f, -20.0f, 20.0f),	 Vec3(20.0f, -20.0f, 20.0f),
+		// 						   Vec3(20.0f, 20.0f, 20.0f),	 Vec3(-20.0f, 20.0f, 20.0f),
+		// 						   Vec3(-20.0f, -20.0f, -20.0f), Vec3(20.0f, -20.0f, -20.0f),
+		// 						   Vec3(20.0f, 20.0f, -20.0f),	 Vec3(-20.0f, 20.0f, -20.0f)};
+
+		// int sews[36] = {2,	5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 1,  10, 7,  16, 13, 22,
+		// 				19, 4, 0, 33, 24, 3,  31, 6,  30, 12, 34, 18, 25, 9,  27, 15, 28, 21};
+
+		// for (int i = 0; i < 36; i += 2)
+		// {
+		// 	Dart d1 = faces[sews[i] / 3].dart;
+		// 	for (int j = 0; j < sews[i] % 3; j++)
+		// 		d1 = phi1(m, d1);
+
+		// 	Dart d2 = faces[sews[i + 1] / 3].dart;
+		// 	for (int k = 0; k < sews[i + 1] % 3; k++)
+		// 		d2 = phi1(m, d2);
+
+		// 	// Dart phi2_d1 = phi2(m, d1);
+		// 	// Dart phi2_d2 = phi2(m, d2);
+
+		// 	// std::cout << d1 << "|" << phi2_d1 << std::endl;
+		// 	phi2_unsew(m, d1);
+		// 	phi2_unsew(m, d2);
+		// 	phi2_sew(m, d1, d2);
+		// 	// phi2_sew(m, phi2_d1, phi2_d2);
+		// }
+
+		// int translations[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
+		// 						4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
+
+		// int it = 0;
+		// for (Face f : faces)
+		// {
+		// 	foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+		// 		value<Vec3>(*p.mesh_, p.vertex_position_, v) = vertices[translations[it++]];
+		// 		return true;
+		// 	});
+		// }
+
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+		mesh_provider_->emit_connectivity_changed(selected_mesh_);
 	}
 
 public:

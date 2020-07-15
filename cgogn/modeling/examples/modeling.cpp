@@ -52,9 +52,11 @@ int main(int argc, char** argv)
 	using Scalar = cgogn::geometry::Scalar;
 
 	std::string filename;
-	if (argc < 2)
-		filename = std::string(DEFAULT_MESH_PATH) + std::string("off/cube.off");
-	else
+	// if (argc < 2)
+	// 	filename = std::string(DEFAULT_MESH_PATH) + std::string("off/cube.off");
+	// else
+	// 	filename = std::string(argv[1]);
+	if (argc != 1)
 		filename = std::string(argv[1]);
 
 	cgogn::thread_start();
@@ -80,7 +82,16 @@ int main(int argc, char** argv)
 	v1->link_module(&ss);
 	v1->link_module(&st);
 
-	Mesh* m = mp.load_surface_from_file(filename);
+	Mesh* m;
+	
+	if (!filename.empty())
+		m = mp.load_surface_from_file(filename);
+	else
+	{
+		m = mp.add_mesh("Cube");
+		mp.create_cube(*m);
+	}
+
 	if (!m)
 	{
 		std::cout << "File could not be loaded" << std::endl;

@@ -262,6 +262,64 @@ public:
 		return std::make_pair(bb_min_, bb_max_);
 	}
 
+	void create_cube(MESH& m)
+	{
+		cgogn::io::SurfaceImportData surface_data;
+
+		surface_data.reserve(8, 12);
+		auto position = add_attribute<geometry::Vec3, CMap2::Vertex>(m, "position");
+
+		Vec3 vertices[8] = {Vec3(-10.0f, -10.0f, 10.0f), Vec3(10.0f, -10.0f, 10.0f),   Vec3(10.0f, 10.0f, 10.0f),
+							Vec3(-10.0f, 10.0f, 10.0f),	 Vec3(-10.0f, -10.0f, -10.0f), Vec3(10.0f, -10.0f, -10.0f),
+							Vec3(10.0f, 10.0f, -10.0f),	 Vec3(-10.0f, 10.0f, -10.0f)};
+
+		int faces[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
+						 4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
+
+		for (int i = 0; i < 8; i++)
+		{
+			uint32 vertex_id = new_index<Vertex>(m);
+			(*position)[vertex_id] = {vertices[i].x(), vertices[i].y(), vertices[i].z()};
+			surface_data.vertices_id_.push_back(vertex_id);
+		}
+
+		for (int j = 0; j < 36; j += 3)
+		{
+			surface_data.faces_nb_vertices_.push_back(3);
+			surface_data.faces_vertex_indices_.push_back(faces[j]);
+			surface_data.faces_vertex_indices_.push_back(faces[j + 1]);
+			surface_data.faces_vertex_indices_.push_back(faces[j + 2]);
+		}
+
+		import_surface_data(m, surface_data);
+
+		// std::vector<Face> faces;
+		// faces.reserve(12);
+
+		// for (int i = 0; i < 12; i++)
+		// {
+		// 	faces.push_back(add_face(m, 3, true));
+		// }
+
+		// std::vector<Vec3> vertices{Vec3(-20.0f, -20.0f, 20.0f),	 Vec3(20.0f, -20.0f, 20.0f),
+		// 						   Vec3(20.0f, 20.0f, 20.0f),	 Vec3(-20.0f, 20.0f, 20.0f),
+		// 						   Vec3(-20.0f, -20.0f, -20.0f), Vec3(20.0f, -20.0f, -20.0f),
+		// 						   Vec3(20.0f, 20.0f, -20.0f),	 Vec3(-20.0f, 20.0f, -20.0f)};
+
+		// int translations[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
+		// 						4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
+
+		// int it = 0;
+		// std::shared_ptr<Attribute<Vec3>> vertex_position = cgogn::get_attribute<Vec3, Vertex>(m, "position");
+		// for (Face f : faces)
+		// {
+		// 	foreach_incident_vertex(m, f, [&](Vertex v) -> bool {
+		// 		value<Vec3>(m, vertex_position, v) += vertices[translations[it++]];
+		// 		return true;
+		// 	});
+		// }
+	}
+
 private:
 	void update_meshes_bb()
 	{
