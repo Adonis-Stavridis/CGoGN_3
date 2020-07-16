@@ -112,9 +112,8 @@ class SurfaceTools : public ViewModule
 			{
 				std::vector<Vec3> temp_position;
 				temp_position.reserve(selected_vertices_set_->size());
-				selected_vertices_set_->foreach_cell([&](Vertex v) {
-					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v));
-				});
+				selected_vertices_set_->foreach_cell(
+					[&](Vertex v) { temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, v)); });
 				rendering::update_vbo(temp_position, &selected_vertices_vbo_);
 				selected_vertices_position_.swap(temp_position);
 			}
@@ -326,90 +325,92 @@ private:
 	void extrude(MESH& m)
 	{
 		Parameters& p = parameters_[&m];
-		std::queue<Dart> base;
 
 		p.selected_faces_set_->foreach_cell([&](Face f) {
-			// Dart it = phi1(m, f.dart);
-			// while (it != f.dart)
-			// {
-			// 	base.push(phi2(m, it));
-			// 	Dart next = phi1(m, it);
-			// 	phi2_unsew(m, it);
-			// 	it = next;
-			// }
-			// base.push(phi2(m, it));
-			// phi2_unsew(m, f.dart);
+			Dart base[3];
+			uint8 it = 0u;
 
-			mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
-			mesh_provider_->emit_connectivity_changed(selected_mesh_);
+			Dart d = f.dart;
+			do
+			{
+				base[it++] = phi2(m, d);
+				phi2_unsew(m, d);
+				d = phi1(m, d);
+			} while (d != f.dart);
 
-			// Vec3 translation(10.0f, 0.0f, 0.0f);
-			// foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
-			// 	std::cout << phi2(m, v.dart) << std::endl;
-			// 	value<Vec3>(*p.mesh_, p.vertex_position_, v) += translation;
-			// 	return true;
-			// });
+			Face extruded_face = add_face(m, 3, true);
 
-			// Dart newit = phi1(m, f.dart);
-			// while (newit != f.dart)
-			// {
-			// 	Dart next = phi1(m, newit);
-			// 	phi2_sew(m, newit, base.front());
-			// 	base.pop();
-			// 	newit = next;
-			// }
-			// phi2_sew(m, f.dart, base.front());
-			// base.pop();
+			Vec3 abc[3];
+			it = 0u;
+			foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+				abc[it++] = value<Vec3>(*p.mesh_, p.vertex_position_, v);
+				return true;
+			});
+
+			Vec3 ab = abc[1] - abc[0];
+			Vec3 ac = abc[2] - abc[0];
+			Vec3 normal = ab.cross(ac);
+			float height = normal.norm() / 20.0f;
+			normal.normalize();
+
+			it = 0u;
+			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
+				value<Vec3>(*p.mesh_, p.vertex_position_, v) = abc[it++] + normal * height;
+				return true;
+			});
+
+			remove_face(static_cast<CMap1&>(m), CMap1::Face(f), false);
+
+			Face faces_ring[6];
+			for (int i = 0; i < 6; i++)
+			{
+				faces_ring[i] = add_face(m, 3, true);
+				Dart tempd = faces_ring[i].dart;
+				do
+				{
+					phi2_unsew(m, tempd);
+					tempd = phi1(m, tempd);
+				} while (tempd != faces_ring[i].dart);
+			}
+
+			set_index<Vertex>(m, faces_ring[0].dart, index_of(m, Vertex(base[0])));
+			set_index<Vertex>(m, phi1(m, faces_ring[0].dart), index_of(m, Vertex(base[1])));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[0].dart)),
+							  index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
+
+			set_index<Vertex>(m, faces_ring[1].dart, index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
+			set_index<Vertex>(m, phi1(m, faces_ring[1].dart), index_of(m, Vertex(phi1(m, extruded_face.dart))));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[1].dart)), index_of(m, Vertex(base[0])));
+
+			set_index<Vertex>(m, faces_ring[2].dart, index_of(m, Vertex(base[1])));
+			set_index<Vertex>(m, phi1(m, faces_ring[2].dart), index_of(m, Vertex(base[2])));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[2].dart)), index_of(m, Vertex(extruded_face.dart)));
+
+			set_index<Vertex>(m, faces_ring[3].dart, index_of(m, Vertex(extruded_face.dart)));
+			set_index<Vertex>(m, phi1(m, faces_ring[3].dart),
+							  index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[3].dart)), index_of(m, Vertex(base[1])));
+
+			set_index<Vertex>(m, faces_ring[4].dart, index_of(m, Vertex(base[2])));
+			set_index<Vertex>(m, phi1(m, faces_ring[4].dart), index_of(m, Vertex(base[0])));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[4].dart)),
+							  index_of(m, Vertex(phi1(m, extruded_face.dart))));
+
+			set_index<Vertex>(m, faces_ring[5].dart, index_of(m, Vertex(phi1(m, extruded_face.dart))));
+			set_index<Vertex>(m, phi1(m, faces_ring[5].dart), index_of(m, Vertex(extruded_face.dart)));
+			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[5].dart)), index_of(m, Vertex(base[2])));
+
+			// phi2_sew(m, phi1(m, phi1(m, faces_ring[0].dart)), phi1(m, faces_ring[1].dart));
+			// phi2_sew(m, phi1(m, phi1(m, faces_ring[2].dart)), phi1(m, faces_ring[3].dart));
+			// phi2_sew(m, phi1(m, phi1(m, faces_ring[4].dart)), phi1(m, faces_ring[5].dart));
+
+			// phi2_sew(m, base[0], faces_ring[0].dart);
+			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[1].dart);
+			// phi2_sew(m, base[1], faces_ring[2].dart);
+			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[3].dart);
+			// phi2_sew(m, base[2], faces_ring[4].dart);
+			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[5].dart);
 		});
-
-		// TODO : CUBE
-		// std::vector<Face> faces;
-		// faces.reserve(12);
-
-		// for (int i = 0; i < 12; i++)
-		// {
-		// 	faces.push_back(add_face(m, 3, true));
-		// }
-
-		// std::vector<Vec3> vertices{Vec3(-20.0f, -20.0f, 20.0f),	 Vec3(20.0f, -20.0f, 20.0f),
-		// 						   Vec3(20.0f, 20.0f, 20.0f),	 Vec3(-20.0f, 20.0f, 20.0f),
-		// 						   Vec3(-20.0f, -20.0f, -20.0f), Vec3(20.0f, -20.0f, -20.0f),
-		// 						   Vec3(20.0f, 20.0f, -20.0f),	 Vec3(-20.0f, 20.0f, -20.0f)};
-
-		// int sews[36] = {2,	5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 1,  10, 7,  16, 13, 22,
-		// 				19, 4, 0, 33, 24, 3,  31, 6,  30, 12, 34, 18, 25, 9,  27, 15, 28, 21};
-
-		// for (int i = 0; i < 36; i += 2)
-		// {
-		// 	Dart d1 = faces[sews[i] / 3].dart;
-		// 	for (int j = 0; j < sews[i] % 3; j++)
-		// 		d1 = phi1(m, d1);
-
-		// 	Dart d2 = faces[sews[i + 1] / 3].dart;
-		// 	for (int k = 0; k < sews[i + 1] % 3; k++)
-		// 		d2 = phi1(m, d2);
-
-		// 	// Dart phi2_d1 = phi2(m, d1);
-		// 	// Dart phi2_d2 = phi2(m, d2);
-
-		// 	// std::cout << d1 << "|" << phi2_d1 << std::endl;
-		// 	phi2_unsew(m, d1);
-		// 	phi2_unsew(m, d2);
-		// 	phi2_sew(m, d1, d2);
-		// 	// phi2_sew(m, phi2_d1, phi2_d2);
-		// }
-
-		// int translations[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
-		// 						4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
-
-		// int it = 0;
-		// for (Face f : faces)
-		// {
-		// 	foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
-		// 		value<Vec3>(*p.mesh_, p.vertex_position_, v) = vertices[translations[it++]];
-		// 		return true;
-		// 	});
-		// }
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
@@ -829,9 +830,10 @@ protected:
 						need_update |= update_flag;
 
 						if (update_flag)
-						{
 							translate(*p.mesh_, old_position, position);
-						}
+
+						if (ImGui::Button("Extrude"))
+							extrude(*p.mesh_);
 					}
 				}
 			}

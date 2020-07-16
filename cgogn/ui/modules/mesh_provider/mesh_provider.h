@@ -279,7 +279,7 @@ public:
 		for (int i = 0; i < 8; i++)
 		{
 			uint32 vertex_id = new_index<Vertex>(m);
-			(*position)[vertex_id] = {vertices[i].x(), vertices[i].y(), vertices[i].z()};
+			(*position)[vertex_id] = vertices[i];
 			surface_data.vertices_id_.push_back(vertex_id);
 		}
 
