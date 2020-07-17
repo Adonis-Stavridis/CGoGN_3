@@ -328,11 +328,12 @@ private:
 
 		p.selected_faces_set_->foreach_cell([&](Face f) {
 			Face extruded_face = add_face(m, 3, true);
-			p.selected_faces_set_->select(extruded_face);
+			Dart to_remove = phi2(m, extruded_face.dart);
 			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
 				phi2_unsew(m, v.dart);
 				return true;
 			});
+			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
 
 			Dart base[3];
 			Vec3 abc[3];
@@ -362,10 +363,12 @@ private:
 			for (int i = 0; i < 6; i++)
 			{
 				faces_ring[i] = add_face(m, 3, true);
+				to_remove = phi2(m, faces_ring[i].dart);
 				foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
 					phi2_unsew(m, v.dart);
 					return true;
 				});
+				remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
 			}
 
 			set_index<Vertex>(m, faces_ring[0].dart, index_of(m, Vertex(base[0])));
@@ -410,6 +413,8 @@ private:
 			phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[1].dart);
 			phi2_sew(m, phi1(m, phi1(m, extruded_face.dart)), faces_ring[3].dart);
 			phi2_sew(m, extruded_face.dart, faces_ring[5].dart);
+
+			p.selected_faces_set_->select(extruded_face);
 		});
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
