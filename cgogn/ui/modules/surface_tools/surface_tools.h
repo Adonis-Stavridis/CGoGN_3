@@ -339,6 +339,10 @@ private:
 			} while (d != f.dart);
 
 			Face extruded_face = add_face(m, 3, true);
+			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
+				phi2_unsew(m, v.dart);
+				return true;
+			});
 
 			Vec3 abc[3];
 			it = 0u;
@@ -400,16 +404,21 @@ private:
 			set_index<Vertex>(m, phi1(m, faces_ring[5].dart), index_of(m, Vertex(extruded_face.dart)));
 			set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[5].dart)), index_of(m, Vertex(base[2])));
 
-			// phi2_sew(m, phi1(m, phi1(m, faces_ring[0].dart)), phi1(m, faces_ring[1].dart));
-			// phi2_sew(m, phi1(m, phi1(m, faces_ring[2].dart)), phi1(m, faces_ring[3].dart));
-			// phi2_sew(m, phi1(m, phi1(m, faces_ring[4].dart)), phi1(m, faces_ring[5].dart));
+			phi2_sew(m, phi1(m, faces_ring[0].dart), phi1(m, faces_ring[3].dart));
+			phi2_sew(m, phi1(m, faces_ring[2].dart), phi1(m, faces_ring[5].dart));
+			phi2_sew(m, phi1(m, faces_ring[4].dart), phi1(m, faces_ring[1].dart));
 
-			// phi2_sew(m, base[0], faces_ring[0].dart);
-			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[1].dart);
-			// phi2_sew(m, base[1], faces_ring[2].dart);
-			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[3].dart);
-			// phi2_sew(m, base[2], faces_ring[4].dart);
-			// phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[5].dart);
+			phi2_sew(m, phi1(m, phi1(m, faces_ring[0].dart)), phi1(m, phi1(m, faces_ring[1].dart)));
+			phi2_sew(m, phi1(m, phi1(m, faces_ring[2].dart)), phi1(m, phi1(m, faces_ring[3].dart)));
+			phi2_sew(m, phi1(m, phi1(m, faces_ring[4].dart)), phi1(m, phi1(m, faces_ring[5].dart)));
+			
+			phi2_sew(m, base[1], faces_ring[0].dart);
+			phi2_sew(m, base[2], faces_ring[2].dart);
+			phi2_sew(m, base[0], faces_ring[4].dart);
+
+			phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[1].dart);
+			phi2_sew(m, phi1(m, phi1(m, extruded_face.dart)), faces_ring[3].dart);
+			phi2_sew(m, extruded_face.dart, faces_ring[5].dart);
 		});
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
