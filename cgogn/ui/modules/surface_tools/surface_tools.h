@@ -327,17 +327,6 @@ private:
 		Parameters& p = parameters_[&m];
 
 		p.selected_faces_set_->foreach_cell([&](Face f) {
-			Dart base[3];
-			uint8 it = 0u;
-
-			Dart d = f.dart;
-			do
-			{
-				base[it++] = phi2(m, d);
-				phi2_unsew(m, d);
-				d = phi1(m, d);
-			} while (d != f.dart);
-
 			Face extruded_face = add_face(m, 3, true);
 			p.selected_faces_set_->select(extruded_face);
 			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
@@ -345,9 +334,12 @@ private:
 				return true;
 			});
 
+			Dart base[3];
 			Vec3 abc[3];
-			it = 0u;
+			uint8 it = 0u;
 			foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
+				base[it] = phi2(m, v.dart);
+				phi2_unsew(m, v.dart);
 				abc[it++] = value<Vec3>(*p.mesh_, p.vertex_position_, v);
 				return true;
 			});
@@ -370,12 +362,10 @@ private:
 			for (int i = 0; i < 6; i++)
 			{
 				faces_ring[i] = add_face(m, 3, true);
-				Dart tempd = faces_ring[i].dart;
-				do
-				{
-					phi2_unsew(m, tempd);
-					tempd = phi1(m, tempd);
-				} while (tempd != faces_ring[i].dart);
+				foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
+					phi2_unsew(m, v.dart);
+					return true;
+				});
 			}
 
 			set_index<Vertex>(m, faces_ring[0].dart, index_of(m, Vertex(base[0])));
@@ -412,7 +402,7 @@ private:
 			phi2_sew(m, phi1(m, phi1(m, faces_ring[0].dart)), phi1(m, phi1(m, faces_ring[1].dart)));
 			phi2_sew(m, phi1(m, phi1(m, faces_ring[2].dart)), phi1(m, phi1(m, faces_ring[3].dart)));
 			phi2_sew(m, phi1(m, phi1(m, faces_ring[4].dart)), phi1(m, phi1(m, faces_ring[5].dart)));
-			
+
 			phi2_sew(m, base[1], faces_ring[0].dart);
 			phi2_sew(m, base[2], faces_ring[2].dart);
 			phi2_sew(m, base[0], faces_ring[4].dart);
