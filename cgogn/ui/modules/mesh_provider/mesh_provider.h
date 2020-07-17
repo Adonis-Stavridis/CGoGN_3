@@ -292,32 +292,6 @@ public:
 		}
 
 		import_surface_data(m, surface_data);
-
-		// std::vector<Face> faces;
-		// faces.reserve(12);
-
-		// for (int i = 0; i < 12; i++)
-		// {
-		// 	faces.push_back(add_face(m, 3, true));
-		// }
-
-		// std::vector<Vec3> vertices{Vec3(-20.0f, -20.0f, 20.0f),	 Vec3(20.0f, -20.0f, 20.0f),
-		// 						   Vec3(20.0f, 20.0f, 20.0f),	 Vec3(-20.0f, 20.0f, 20.0f),
-		// 						   Vec3(-20.0f, -20.0f, -20.0f), Vec3(20.0f, -20.0f, -20.0f),
-		// 						   Vec3(20.0f, 20.0f, -20.0f),	 Vec3(-20.0f, 20.0f, -20.0f)};
-
-		// int translations[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
-		// 						4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
-
-		// int it = 0;
-		// std::shared_ptr<Attribute<Vec3>> vertex_position = cgogn::get_attribute<Vec3, Vertex>(m, "position");
-		// for (Face f : faces)
-		// {
-		// 	foreach_incident_vertex(m, f, [&](Vertex v) -> bool {
-		// 		value<Vec3>(m, vertex_position, v) += vertices[translations[it++]];
-		// 		return true;
-		// 	});
-		// }
 	}
 
 private:
