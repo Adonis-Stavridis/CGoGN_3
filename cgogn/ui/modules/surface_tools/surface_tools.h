@@ -339,6 +339,7 @@ private:
 			} while (d != f.dart);
 
 			Face extruded_face = add_face(m, 3, true);
+			p.selected_faces_set_->select(extruded_face);
 			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
 				phi2_unsew(m, v.dart);
 				return true;
@@ -423,6 +424,7 @@ private:
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_faces_set_);
 	}
 
 public:
