@@ -83,7 +83,7 @@ int main(int argc, char** argv)
 	v1->link_module(&st);
 
 	Mesh* m;
-	
+
 	if (!filename.empty())
 		m = mp.load_surface_from_file(filename);
 	else
