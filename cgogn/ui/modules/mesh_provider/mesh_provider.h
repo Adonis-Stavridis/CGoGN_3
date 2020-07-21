@@ -269,9 +269,9 @@ public:
 		surface_data.reserve(8, 12);
 		auto position = add_attribute<geometry::Vec3, CMap2::Vertex>(m, "position");
 
-		Vec3 vertices[8] = {Vec3(-10.0f, -10.0f, 10.0f), Vec3(10.0f, -10.0f, 10.0f),   Vec3(10.0f, 10.0f, 10.0f),
-							Vec3(-10.0f, 10.0f, 10.0f),	 Vec3(-10.0f, -10.0f, -10.0f), Vec3(10.0f, -10.0f, -10.0f),
-							Vec3(10.0f, 10.0f, -10.0f),	 Vec3(-10.0f, 10.0f, -10.0f)};
+		Vec3 vertices[8] = {Vec3(-1.0f, -1.0f, 1.0f), Vec3(1.0f, -1.0f, 1.0f),	 Vec3(1.0f, 1.0f, 1.0f),
+							Vec3(-1.0f, 1.0f, 1.0f),  Vec3(-1.0f, -1.0f, -1.0f), Vec3(1.0f, -1.0f, -1.0f),
+							Vec3(1.0f, 1.0f, -1.0f),  Vec3(-1.0f, 1.0f, -1.0f)};
 
 		int faces[36] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5,
 						 4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
