@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 
 	std::string filename;
 	// if (argc < 2)
-	// 	filename = std::string(DEFAULT_MESH_PATH) + std::string("off/cube.off");
+	// 	filename = std::string(DEFAULT_MESH_PATH) + std::string("off/socket.off");
 	// else
 	// 	filename = std::string(argv[1]);
 	if (argc != 1)
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
 	else
 	{
 		m = mp.add_mesh("Cube");
-		mp.create_cube(*m);
+		mp.create_cube(*m, true);
 	}
 
 	if (!m)
