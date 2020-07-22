@@ -89,7 +89,7 @@ int main(int argc, char** argv)
 	else
 	{
 		m = mp.add_mesh("Cube");
-		mp.create_cube(*m, true);
+		mp.create_cube(*m);
 	}
 
 	if (!m)
