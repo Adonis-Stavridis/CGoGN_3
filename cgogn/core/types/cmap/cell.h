@@ -177,22 +177,40 @@ struct Cell
 	}
 };
 
+/**
+ * \brief Eigen Vec3 extended class
+ */
 class Vec3Ext : public Eigen::Vector3d
 {
 public:
+	/**
+	 * \brief Creates Vec3 extended object from Vec3.
+	 */
 	Vec3Ext(const Eigen::Vector3d& vec) : Eigen::Vector3d(vec)
 	{
 	}
 
+	/**
+	 * \brief Tests equality between two Vec3Ext
+	 * \param[out] boolean value of comparison
+	 * \param[in] vec the Vec3 to compare with
+	 */
 	inline bool operator==(const Eigen::Vector3d& vec) const
 	{
 		return (this->x() == vec.x() && this->y() == vec.y() && this->z() == vec.z());
 	}
 };
 
+/**
+ * \brief Hash function class for Eigen Vec3 extended class
+ */
 class Vec3ExtHashFunction
 {
 public:
+	/**
+	 * \brief Creates hash function
+	 * \param[in] vec the Vec3Ext to hash
+	 */
 	size_t operator()(const Vec3Ext& vec) const
 	{
 		std::hash<int> hasher;
