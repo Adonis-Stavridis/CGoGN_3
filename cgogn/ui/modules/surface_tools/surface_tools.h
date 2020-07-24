@@ -126,7 +126,6 @@ class SurfaceTools : public ViewModule
 				std::vector<Vec3> temp_position;
 				temp_position.reserve(selected_edges_set_->size() * 2);
 				selected_edges_set_->foreach_cell([&](Edge e) {
-					std::cout << "Selected :" << e << std::endl;
 					std::vector<Vertex> vertices = incident_vertices(*mesh_, e);
 					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[0]));
 					temp_position.push_back(value<Vec3>(*mesh_, vertex_position_, vertices[1]));
@@ -367,7 +366,6 @@ private:
 
 		for (auto& val : dirs)
 		{
-			std::cout << "Dirs :" << val.first << std::endl;
 			Dart next_edges1[2];
 			next_edges1[1] = next_edges1[0] = phi1(m, Dart(val.first));
 			if (phi1(m, next_edges1[1]) == Dart(val.first))
@@ -453,19 +451,24 @@ private:
 			phi2_sew(m, to_sew2, holes[1].dart);
 			phi2_sew(m, phi1(m, holes[1].dart), phi1(m, phi1(m, phi1(m, bevel_face.dart))));
 			phi2_sew(m, phi1(m, phi1(m, holes[1].dart)), next_edges2[1]);
+		}
 
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+
+		for (auto& val : dirs)
+		{
 			p.selected_edges_set_->select(Edge(Dart(val.first)));
-			p.selected_edges_set_->select(Edge(phi2(m, neighbour)));
+			p.selected_edges_set_->select(Edge(phi1(m, phi1(m, phi2(m, Dart(val.first))))));
 		}
 
 		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_edges_set_);
-		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
-		mesh_provider_->emit_connectivity_changed(selected_mesh_);
 	}
 
 	void extrude(MESH& m)
 	{
 		Parameters& p = parameters_[&m];
+		std::vector<Face> extruded_faces;
 
 		p.selected_faces_set_->foreach_cell([&](Face f) {
 			uint8 nVertex = 0;
@@ -596,11 +599,15 @@ private:
 				}
 			}
 
-			p.selected_faces_set_->select(extruded_face);
+			extruded_faces.push_back(extruded_face);
 		});
 
-		mesh_provider_->emit_connectivity_changed(selected_mesh_);
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+
+		for (Face sel : extruded_faces)
+			p.selected_faces_set_->select(sel);
+
 		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_faces_set_);
 	}
 
