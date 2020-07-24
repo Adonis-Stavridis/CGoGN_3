@@ -354,9 +354,6 @@ private:
 						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(neighbour)));
 			dir2 /= 4.0f;
 
-			if (dir1 == (-1 * dir2))
-				return;
-
 			dirs[e.dart.index] = {dir1, dir2};
 			next_edges[e.dart.index] = {{next_edges1[0], next_edges1[1]}, {next_edges2[0], next_edges2[1]}};
 		});
