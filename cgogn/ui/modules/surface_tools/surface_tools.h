@@ -482,39 +482,6 @@ private:
 		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_edges_set_);
 	}
 
-	void separate_faces(MESH& m)
-	{
-		Parameters& p = parameters_[&m];
-
-		foreach_cell(m, [&](Face f) {
-			std::vector<Vec3> face_vertices;
-			float centre[3];
-
-			foreach_incident_vertex(m, f, [&](Vertex v) -> bool {
-				face_vertices.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v));
-				return true;
-			});
-			set_position(face_vertices, centre);
-
-			Face new_face = add_face(m, face_vertices.size(), true);
-			Dart new_face_dart = new_face.dart;
-			for (Vec3 val : face_vertices)
-			{
-				Vec3 scaleVec(centre[0] - val.x(), centre[1] - val.y(), centre[2] - val.z());
-				scaleVec *= 0.25f;
-				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(new_face_dart)) = val + scaleVec;
-				new_face_dart = phi1(m, new_face_dart);
-			}
-
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(f.dart), true);
-
-			return true;
-		});
-
-		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
-		mesh_provider_->emit_connectivity_changed(selected_mesh_);
-	}
-
 	void bevel_mesh(MESH& m)
 	{
 		Parameters& p = parameters_[&m];
@@ -563,8 +530,6 @@ private:
 
 			phi2_sew(m, phi1(m, beveled_face.dart), neighbour);
 			phi2_sew(m, phi1(m, phi1(m, phi1(m, beveled_face.dart))), e.dart);
-			// std::cout << neighbour << "|" << phi2(m, neighbour) << std::endl;
-			// std::cout << e.dart << "|" << phi2(m, e.dart) << std::endl;
 
 			return true;
 		});
