@@ -482,7 +482,7 @@ private:
 		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_edges_set_);
 	}
 
-	void bevel_mesh(MESH& m)
+	void separate_faces(MESH& m)
 	{
 		Parameters& p = parameters_[&m];
 
@@ -510,6 +510,68 @@ private:
 
 			return true;
 		});
+
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
+		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+	}
+
+	void bevel_mesh(MESH& m)
+	{
+		Parameters& p = parameters_[&m];
+		std::vector<Dart> new_faces;
+
+		foreach_cell(m, [&](Face f) {
+			std::vector<Vec3> face_vertices;
+			float centre[3];
+
+			foreach_incident_vertex(m, f, [&](Vertex v) -> bool {
+				face_vertices.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v));
+				return true;
+			});
+			set_position(face_vertices, centre);
+
+			Dart face_dart = f.dart;
+			for (Vec3 val : face_vertices)
+			{
+				Vec3 scaleVec(centre[0] - val.x(), centre[1] - val.y(), centre[2] - val.z());
+				scaleVec *= 0.4f;
+				set_index<Vertex>(m, face_dart, new_index<CMap2::Vertex>(m));
+				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(face_dart)) = val + scaleVec;
+				face_dart = phi1(m, face_dart);
+			}
+
+			return true;
+		});
+
+		foreach_cell(m, [&](Edge e) {
+			Dart neighbour = phi2(m, e.dart);
+			phi2_unsew(m, e.dart);
+
+			Face beveled_face = add_face(m, 4u, true);
+			new_faces.push_back(beveled_face.dart);
+			Dart to_remove = phi2(m, beveled_face.dart);
+			foreach_incident_vertex(*p.mesh_, beveled_face, [&](Vertex v) -> bool {
+				phi2_unsew(m, v.dart);
+				return true;
+			});
+			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+
+			set_index<Vertex>(m, beveled_face.dart, index_of(m, Vertex(e.dart)));
+			set_index<Vertex>(m, phi1(m, beveled_face.dart), index_of(m, Vertex(phi1(m, neighbour))));
+			set_index<Vertex>(m, phi1(m, phi1(m, beveled_face.dart)), index_of(m, Vertex(neighbour)));
+			set_index<Vertex>(m, phi1(m, phi1(m, phi1(m, beveled_face.dart))), index_of(m, Vertex(phi1(m, e.dart))));
+
+			phi2_sew(m, phi1(m, beveled_face.dart), neighbour);
+			phi2_sew(m, phi1(m, phi1(m, phi1(m, beveled_face.dart))), e.dart);
+			// std::cout << neighbour << "|" << phi2(m, neighbour) << std::endl;
+			// std::cout << e.dart << "|" << phi2(m, e.dart) << std::endl;
+
+			return true;
+		});
+
+		for (Dart d : new_faces)
+			if (d == phi2(m, d))
+				close_hole(m, d, true);
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
