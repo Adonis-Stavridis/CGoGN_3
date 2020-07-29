@@ -619,96 +619,35 @@ private:
 
 			remove_face(static_cast<CMap1&>(m), CMap1::Face(f), false);
 
-			if (nVertex == 3)
+			std::vector<Face> faces_ring;
+			for (int i = 0; i < nVertex; i++)
 			{
-				Face faces_ring[6];
-				for (int i = 0; i < 6; i++)
-				{
-					faces_ring[i] = add_face(m, 3u, true);
-					to_remove = phi2(m, faces_ring[i].dart);
-					foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
-						phi2_unsew(m, v.dart);
-						return true;
-					});
-					remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
-				}
-
-				set_index<Vertex>(m, faces_ring[0].dart, index_of(m, Vertex(base[0])));
-				set_index<Vertex>(m, phi1(m, faces_ring[0].dart), index_of(m, Vertex(base[1])));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[0].dart)),
-								  index_of(m, Vertex(phi1(m, extruded_face.dart))));
-
-				set_index<Vertex>(m, faces_ring[1].dart, index_of(m, Vertex(phi1(m, extruded_face.dart))));
-				set_index<Vertex>(m, phi1(m, faces_ring[1].dart), index_of(m, Vertex(extruded_face.dart)));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[1].dart)), index_of(m, Vertex(base[0])));
-
-				set_index<Vertex>(m, faces_ring[2].dart, index_of(m, Vertex(base[1])));
-				set_index<Vertex>(m, phi1(m, faces_ring[2].dart), index_of(m, Vertex(base[2])));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[2].dart)),
-								  index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
-
-				set_index<Vertex>(m, faces_ring[3].dart, index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
-				set_index<Vertex>(m, phi1(m, faces_ring[3].dart), index_of(m, Vertex(phi1(m, extruded_face.dart))));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[3].dart)), index_of(m, Vertex(base[1])));
-
-				set_index<Vertex>(m, faces_ring[4].dart, index_of(m, Vertex(base[2])));
-				set_index<Vertex>(m, phi1(m, faces_ring[4].dart), index_of(m, Vertex(base[0])));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[4].dart)), index_of(m, Vertex(extruded_face.dart)));
-
-				set_index<Vertex>(m, faces_ring[5].dart, index_of(m, Vertex(extruded_face.dart)));
-				set_index<Vertex>(m, phi1(m, faces_ring[5].dart),
-								  index_of(m, Vertex(phi1(m, phi1(m, extruded_face.dart)))));
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[5].dart)), index_of(m, Vertex(base[2])));
-
-				phi2_sew(m, phi1(m, faces_ring[0].dart), phi1(m, faces_ring[3].dart));
-				phi2_sew(m, phi1(m, faces_ring[2].dart), phi1(m, faces_ring[5].dart));
-				phi2_sew(m, phi1(m, faces_ring[4].dart), phi1(m, faces_ring[1].dart));
-
-				phi2_sew(m, phi1(m, phi1(m, faces_ring[0].dart)), phi1(m, phi1(m, faces_ring[1].dart)));
-				phi2_sew(m, phi1(m, phi1(m, faces_ring[2].dart)), phi1(m, phi1(m, faces_ring[3].dart)));
-				phi2_sew(m, phi1(m, phi1(m, faces_ring[4].dart)), phi1(m, phi1(m, faces_ring[5].dart)));
-
-				phi2_sew(m, base[1], faces_ring[0].dart);
-				phi2_sew(m, base[2], faces_ring[2].dart);
-				phi2_sew(m, base[0], faces_ring[4].dart);
-
-				phi2_sew(m, extruded_face.dart, faces_ring[1].dart);
-				phi2_sew(m, phi1(m, extruded_face.dart), faces_ring[3].dart);
-				phi2_sew(m, phi1(m, phi1(m, extruded_face.dart)), faces_ring[5].dart);
+				faces_ring.push_back(add_face(m, 4u, true));
+				to_remove = phi2(m, faces_ring[i].dart);
+				foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
+					phi2_unsew(m, v.dart);
+					return true;
+				});
+				remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
 			}
-			else
+
+			Dart next = extruded_face.dart;
+			for (int i = 0; i < nVertex; i++)
 			{
-				std::vector<Face> faces_ring;
-				for (int i = 0; i < nVertex; i++)
-				{
-					faces_ring.push_back(add_face(m, 4u, true));
-					to_remove = phi2(m, faces_ring[i].dart);
-					foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
-						phi2_unsew(m, v.dart);
-						return true;
-					});
-					remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
-				}
+				set_index<Vertex>(m, faces_ring[i].dart, index_of(m, Vertex(base[i])));
+				set_index<Vertex>(m, phi1(m, faces_ring[i].dart), index_of(m, Vertex(base[(i + 1) % nVertex])));
+				set_index<Vertex>(m, phi1(m, phi1(m, phi1(m, faces_ring[i].dart))), index_of(m, Vertex(next)));
+				next = phi1(m, next);
+				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[i].dart)), index_of(m, Vertex(next)));
+			}
 
-				Dart next = extruded_face.dart;
-				for (int i = 0; i < nVertex; i++)
-				{
-					set_index<Vertex>(m, faces_ring[i].dart, index_of(m, Vertex(base[i])));
-					set_index<Vertex>(m, phi1(m, faces_ring[i].dart), index_of(m, Vertex(base[(i + 1) % nVertex])));
-					set_index<Vertex>(m, phi1(m, phi1(m, phi1(m, faces_ring[i].dart))), index_of(m, Vertex(next)));
-					next = phi1(m, next);
-					set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[i].dart)), index_of(m, Vertex(next)));
-				}
-
-				next = extruded_face.dart;
-				for (int i = 0; i < nVertex; i++)
-				{
-					phi2_sew(m, faces_ring[i].dart, base[(i + 1) % nVertex]);
-					phi2_sew(m, phi1(m, faces_ring[i].dart),
-							 phi1(m, phi1(m, phi1(m, faces_ring[(i + 1) % nVertex].dart))));
-					phi2_sew(m, phi1(m, phi1(m, faces_ring[i].dart)), next);
-					next = phi1(m, next);
-				}
+			next = extruded_face.dart;
+			for (int i = 0; i < nVertex; i++)
+			{
+				phi2_sew(m, faces_ring[i].dart, base[(i + 1) % nVertex]);
+				phi2_sew(m, phi1(m, faces_ring[i].dart), phi1(m, phi1(m, phi1(m, faces_ring[(i + 1) % nVertex].dart))));
+				phi2_sew(m, phi1(m, phi1(m, faces_ring[i].dart)), next);
+				next = phi1(m, next);
 			}
 
 			extruded_faces.push_back(extruded_face);
@@ -968,6 +907,11 @@ protected:
 			if (p.vertex_position_)
 			{
 				ImGui::Separator();
+				ImGui::TextUnformatted("Mesh Tools");
+				if (ImGui::Button("Bevel Mesh"))
+					bevel_mesh(*p.mesh_);
+
+				ImGui::Separator();
 				int* ptr_sel_cell = reinterpret_cast<int*>(&p.selecting_cell_);
 				need_update |= ImGui::RadioButton("Vertex", ptr_sel_cell, VertexSelect);
 				ImGui::SameLine();
@@ -1146,10 +1090,6 @@ protected:
 							extrude(*p.mesh_);
 					}
 				}
-
-				ImGui::Separator();
-				if (ImGui::Button("Bevel Mesh"))
-					bevel_mesh(*p.mesh_);
 			}
 		}
 
