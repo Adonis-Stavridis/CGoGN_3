@@ -263,12 +263,10 @@ private:
 		array[2] /= size;
 	}
 
-	void translate(const MESH& m, float old_position[3], float position[3])
+	void translate(Parameters& p, float old_position[3], float position[3])
 	{
 		if (old_position[0] == position[0] && old_position[1] == position[1] && old_position[2] == position[2])
 			return;
-
-		Parameters& p = parameters_[&m];
 
 		Vec3 translation(position[0] - old_position[0], position[1] - old_position[1], position[2] - old_position[2]);
 
@@ -322,34 +320,33 @@ private:
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 	}
 
-	void bevel(MESH& m)
+	void bevel(Parameters& p)
 	{
-		Parameters& p = parameters_[&m];
 		std::unordered_map<int, std::pair<Vec3, Vec3>> dirs;
 		std::unordered_map<int, std::pair<std::pair<Dart, Dart>, std::pair<Dart, Dart>>> next_edges;
 
 		p.selected_edges_set_->foreach_cell([&](Edge e) {
 			Dart next_edges1[2];
-			next_edges1[1] = next_edges1[0] = phi1(m, e.dart);
-			if (phi1(m, next_edges1[1]) == e.dart)
+			next_edges1[1] = next_edges1[0] = phi1(*p.mesh_, e.dart);
+			if (phi1(*p.mesh_, next_edges1[1]) == e.dart)
 				std::cerr << "Illegal bevel operation on single edges" << std::endl;
-			while (phi1(m, next_edges1[1]) != e.dart)
-				next_edges1[1] = phi1(m, next_edges1[1]);
+			while (phi1(*p.mesh_, next_edges1[1]) != e.dart)
+				next_edges1[1] = phi1(*p.mesh_, next_edges1[1]);
 
-			Vec3 dir1 = (value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, next_edges1[0]))) -
-						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, next_edges1[0])))) +
+			Vec3 dir1 = (value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(*p.mesh_, next_edges1[0]))) -
+						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(*p.mesh_, next_edges1[0])))) +
 						(value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(next_edges1[1])) -
 						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(e.dart)));
 			dir1 /= 4.0f;
 
 			Dart next_edges2[2];
-			Dart neighbour = phi2(m, e.dart);
-			next_edges2[1] = next_edges2[0] = phi1(m, neighbour);
-			while (phi1(m, next_edges2[1]) != neighbour)
-				next_edges2[1] = phi1(m, next_edges2[1]);
+			Dart neighbour = phi2(*p.mesh_, e.dart);
+			next_edges2[1] = next_edges2[0] = phi1(*p.mesh_, neighbour);
+			while (phi1(*p.mesh_, next_edges2[1]) != neighbour)
+				next_edges2[1] = phi1(*p.mesh_, next_edges2[1]);
 
-			Vec3 dir2 = (value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, next_edges2[0]))) -
-						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, next_edges2[0])))) +
+			Vec3 dir2 = (value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(*p.mesh_, next_edges2[0]))) -
+						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(*p.mesh_, next_edges2[0])))) +
 						(value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(next_edges2[1])) -
 						 value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(neighbour)));
 			dir2 /= 4.0f;
@@ -364,37 +361,38 @@ private:
 		for (auto& val : dirs)
 		{
 			Dart next_edges1[2];
-			next_edges1[1] = next_edges1[0] = phi1(m, Dart(val.first));
-			if (phi1(m, next_edges1[1]) == Dart(val.first))
+			next_edges1[1] = next_edges1[0] = phi1(*p.mesh_, Dart(val.first));
+			if (phi1(*p.mesh_, next_edges1[1]) == Dart(val.first))
 				std::cerr << "Illegal bevel operation on single edges" << std::endl;
-			while (phi1(m, next_edges1[1]) != Dart(val.first))
-				next_edges1[1] = phi1(m, next_edges1[1]);
+			while (phi1(*p.mesh_, next_edges1[1]) != Dart(val.first))
+				next_edges1[1] = phi1(*p.mesh_, next_edges1[1]);
 
 			Dart next_edges2[2];
-			Dart neighbour = phi2(m, Dart(val.first));
-			next_edges2[1] = next_edges2[0] = phi1(m, neighbour);
-			if (phi1(m, next_edges2[1]) == neighbour)
+			Dart neighbour = phi2(*p.mesh_, Dart(val.first));
+			next_edges2[1] = next_edges2[0] = phi1(*p.mesh_, neighbour);
+			if (phi1(*p.mesh_, next_edges2[1]) == neighbour)
 				std::cerr << "Illegal bevel operation on single edges" << std::endl;
-			while (phi1(m, next_edges2[1]) != neighbour)
-				next_edges2[1] = phi1(m, next_edges2[1]);
+			while (phi1(*p.mesh_, next_edges2[1]) != neighbour)
+				next_edges2[1] = phi1(*p.mesh_, next_edges2[1]);
 
 			if (dirs.count(Dart(val.first).index) == 0)
 				return;
 
-			Face bevel_face = add_face(m, 4u, true);
-			Dart to_remove = phi2(m, bevel_face.dart);
+			Face bevel_face = add_face(*p.mesh_, 4u, true);
+			Dart to_remove = phi2(*p.mesh_, bevel_face.dart);
 			foreach_incident_vertex(*p.mesh_, bevel_face, [&](Vertex v) -> bool {
-				phi2_unsew(m, v.dart);
+				phi2_unsew(*p.mesh_, v.dart);
 				return true;
 			});
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 
-			set_index<Vertex>(m, phi1(m, bevel_face.dart), index_of(m, Vertex(Dart(val.first))));
-			set_index<Vertex>(m, bevel_face.dart, index_of(m, Vertex(next_edges1[0])));
-			value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, phi1(m, bevel_face.dart)))) =
+			set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, bevel_face.dart), index_of(*p.mesh_, Vertex(Dart(val.first))));
+			set_index<Vertex>(*p.mesh_, bevel_face.dart, index_of(*p.mesh_, Vertex(next_edges1[0])));
+			value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart)))) =
 				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(next_edges2[0])) + dirs[Dart(val.first).index].second;
 			;
-			value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(phi1(m, phi1(m, phi1(m, bevel_face.dart))))) =
+			value<Vec3>(*p.mesh_, p.vertex_position_,
+						Vertex(phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart))))) =
 				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(neighbour)) + dirs[Dart(val.first).index].second;
 			;
 
@@ -405,68 +403,71 @@ private:
 
 			std::vector<Dart> to_sew1;
 			std::vector<Dart> to_sew2;
-			Dart to_sew_face = phi2(m, next_edges2[0]);
-			for (Dart d = phi1(m, to_sew_face); d != to_sew_face; d = phi1(m, d))
+			Dart to_sew_face = phi2(*p.mesh_, next_edges2[0]);
+			for (Dart d = phi1(*p.mesh_, to_sew_face); d != to_sew_face; d = phi1(*p.mesh_, d))
 			{
-				to_sew1.push_back(phi2(m, d));
-				phi2_unsew(m, d);
+				to_sew1.push_back(phi2(*p.mesh_, d));
+				phi2_unsew(*p.mesh_, d);
 			}
 			to_sew1.push_back(next_edges2[0]);
-			to_sew1.push_back(phi1(m, bevel_face.dart));
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_sew_face), false);
+			to_sew1.push_back(phi1(*p.mesh_, bevel_face.dart));
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_sew_face), false);
 
-			to_sew_face = phi2(m, next_edges2[1]);
-			for (Dart d = phi1(m, to_sew_face); d != to_sew_face; d = phi1(m, d))
+			to_sew_face = phi2(*p.mesh_, next_edges2[1]);
+			for (Dart d = phi1(*p.mesh_, to_sew_face); d != to_sew_face; d = phi1(*p.mesh_, d))
 			{
-				to_sew2.push_back(phi2(m, d));
-				phi2_unsew(m, d);
+				to_sew2.push_back(phi2(*p.mesh_, d));
+				phi2_unsew(*p.mesh_, d);
 			}
-			to_sew2.push_back(phi1(m, phi1(m, phi1(m, bevel_face.dart))));
+			to_sew2.push_back(phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart))));
 			to_sew2.push_back(next_edges2[1]);
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_sew_face), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_sew_face), false);
 
-			phi2_unsew(m, neighbour);
-			phi2_unsew(m, next_edges2[0]);
-			phi2_unsew(m, next_edges2[1]);
+			phi2_unsew(*p.mesh_, neighbour);
+			phi2_unsew(*p.mesh_, next_edges2[0]);
+			phi2_unsew(*p.mesh_, next_edges2[1]);
 
-			set_index<Vertex>(m, neighbour, index_of(m, Vertex(phi1(m, phi1(m, phi1(m, bevel_face.dart))))));
-			set_index<Vertex>(m, next_edges2[0], index_of(m, Vertex(phi1(m, phi1(m, bevel_face.dart)))));
+			set_index<Vertex>(
+				*p.mesh_, neighbour,
+				index_of(*p.mesh_, Vertex(phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart))))));
+			set_index<Vertex>(*p.mesh_, next_edges2[0],
+							  index_of(*p.mesh_, Vertex(phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart)))));
 
-			phi2_sew(m, Dart(val.first), bevel_face.dart);
-			phi2_sew(m, neighbour, phi1(m, phi1(m, bevel_face.dart)));
+			phi2_sew(*p.mesh_, Dart(val.first), bevel_face.dart);
+			phi2_sew(*p.mesh_, neighbour, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart)));
 
 			Face holes[2];
-			holes[0] = add_face(m, to_sew1.size(), true);
-			holes[1] = add_face(m, to_sew2.size(), true);
+			holes[0] = add_face(*p.mesh_, to_sew1.size(), true);
+			holes[1] = add_face(*p.mesh_, to_sew2.size(), true);
 
-			to_remove = phi2(m, holes[0].dart);
+			to_remove = phi2(*p.mesh_, holes[0].dart);
 			foreach_incident_vertex(*p.mesh_, holes[0], [&](Vertex v) -> bool {
-				phi2_unsew(m, v.dart);
+				phi2_unsew(*p.mesh_, v.dart);
 				return true;
 			});
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 
-			to_remove = phi2(m, holes[1].dart);
+			to_remove = phi2(*p.mesh_, holes[1].dart);
 			foreach_incident_vertex(*p.mesh_, holes[1], [&](Vertex v) -> bool {
-				phi2_unsew(m, v.dart);
+				phi2_unsew(*p.mesh_, v.dart);
 				return true;
 			});
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 
 			Dart hole_dart = holes[0].dart;
 			for (size_t i = 0; i < to_sew1.size(); i++)
 			{
-				set_index<Vertex>(m, hole_dart, index_of(m, Vertex(to_sew1[i])));
-				phi2_sew(m, hole_dart, to_sew1[(i + 1) % to_sew1.size()]);
-				hole_dart = phi1(m, hole_dart);
+				set_index<Vertex>(*p.mesh_, hole_dart, index_of(*p.mesh_, Vertex(to_sew1[i])));
+				phi2_sew(*p.mesh_, hole_dart, to_sew1[(i + 1) % to_sew1.size()]);
+				hole_dart = phi1(*p.mesh_, hole_dart);
 			}
 
 			hole_dart = holes[1].dart;
 			for (size_t i = 0; i < to_sew2.size(); i++)
 			{
-				set_index<Vertex>(m, hole_dart, index_of(m, Vertex(to_sew2[i])));
-				phi2_sew(m, hole_dart, to_sew2[(i + 1) % to_sew2.size()]);
-				hole_dart = phi1(m, hole_dart);
+				set_index<Vertex>(*p.mesh_, hole_dart, index_of(*p.mesh_, Vertex(to_sew2[i])));
+				phi2_sew(*p.mesh_, hole_dart, to_sew2[(i + 1) % to_sew2.size()]);
+				hole_dart = phi1(*p.mesh_, hole_dart);
 			}
 		}
 
@@ -476,22 +477,21 @@ private:
 		for (auto& val : dirs)
 		{
 			p.selected_edges_set_->select(Edge(Dart(val.first)));
-			p.selected_edges_set_->select(Edge(phi1(m, phi1(m, phi2(m, Dart(val.first))))));
+			p.selected_edges_set_->select(Edge(phi1(*p.mesh_, phi1(*p.mesh_, phi2(*p.mesh_, Dart(val.first))))));
 		}
 
 		mesh_provider_->emit_cells_set_changed(selected_mesh_, p.selected_edges_set_);
 	}
 
-	void bevel_mesh(MESH& m)
+	void bevel_mesh(Parameters& p)
 	{
-		Parameters& p = parameters_[&m];
 		std::vector<Dart> new_faces;
 
-		foreach_cell(m, [&](Face f) {
+		foreach_cell(*p.mesh_, [&](Face f) {
 			std::vector<Vec3> face_vertices;
 			float centre[3];
 
-			foreach_incident_vertex(m, f, [&](Vertex v) -> bool {
+			foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
 				face_vertices.push_back(value<Vec3>(*p.mesh_, p.vertex_position_, v));
 				return true;
 			});
@@ -502,49 +502,51 @@ private:
 			{
 				Vec3 scaleVec(centre[0] - val.x(), centre[1] - val.y(), centre[2] - val.z());
 				scaleVec *= 0.4f;
-				set_index<Vertex>(m, face_dart, new_index<CMap2::Vertex>(m));
+				set_index<Vertex>(*p.mesh_, face_dart, new_index<CMap2::Vertex>(*p.mesh_));
 				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(face_dart)) = val + scaleVec;
-				face_dart = phi1(m, face_dart);
+				face_dart = phi1(*p.mesh_, face_dart);
 			}
 
 			return true;
 		});
 
-		foreach_cell(m, [&](Edge e) {
-			Dart neighbour = phi2(m, e.dart);
-			phi2_unsew(m, e.dart);
+		foreach_cell(*p.mesh_, [&](Edge e) {
+			Dart neighbour = phi2(*p.mesh_, e.dart);
+			phi2_unsew(*p.mesh_, e.dart);
 
-			Face beveled_face = add_face(m, 4u, true);
+			Face beveled_face = add_face(*p.mesh_, 4u, true);
 			new_faces.push_back(beveled_face.dart);
-			Dart to_remove = phi2(m, beveled_face.dart);
+			Dart to_remove = phi2(*p.mesh_, beveled_face.dart);
 			foreach_incident_vertex(*p.mesh_, beveled_face, [&](Vertex v) -> bool {
-				phi2_unsew(m, v.dart);
+				phi2_unsew(*p.mesh_, v.dart);
 				return true;
 			});
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 
-			set_index<Vertex>(m, beveled_face.dart, index_of(m, Vertex(e.dart)));
-			set_index<Vertex>(m, phi1(m, beveled_face.dart), index_of(m, Vertex(phi1(m, neighbour))));
-			set_index<Vertex>(m, phi1(m, phi1(m, beveled_face.dart)), index_of(m, Vertex(neighbour)));
-			set_index<Vertex>(m, phi1(m, phi1(m, phi1(m, beveled_face.dart))), index_of(m, Vertex(phi1(m, e.dart))));
+			set_index<Vertex>(*p.mesh_, beveled_face.dart, index_of(*p.mesh_, Vertex(e.dart)));
+			set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, beveled_face.dart),
+							  index_of(*p.mesh_, Vertex(phi1(*p.mesh_, neighbour))));
+			set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, beveled_face.dart)),
+							  index_of(*p.mesh_, Vertex(neighbour)));
+			set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, beveled_face.dart))),
+							  index_of(*p.mesh_, Vertex(phi1(*p.mesh_, e.dart))));
 
-			phi2_sew(m, phi1(m, beveled_face.dart), neighbour);
-			phi2_sew(m, phi1(m, phi1(m, phi1(m, beveled_face.dart))), e.dart);
+			phi2_sew(*p.mesh_, phi1(*p.mesh_, beveled_face.dart), neighbour);
+			phi2_sew(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, beveled_face.dart))), e.dart);
 
 			return true;
 		});
 
 		for (Dart d : new_faces)
-			if (d == phi2(m, d))
-				close_hole(m, d, true);
+			if (d == phi2(*p.mesh_, d))
+				close_hole(*p.mesh_, d, true);
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
 	}
 
-	void extrude(MESH& m)
+	void extrude(Parameters& p)
 	{
-		Parameters& p = parameters_[&m];
 		std::vector<Face> extruded_faces;
 
 		p.selected_faces_set_->foreach_cell([&](Face f) {
@@ -554,8 +556,8 @@ private:
 			uint8 it = 0u;
 			foreach_incident_vertex(*p.mesh_, f, [&](Vertex v) -> bool {
 				nVertex++;
-				base.push_back(phi2(m, v.dart));
-				phi2_unsew(m, v.dart);
+				base.push_back(phi2(*p.mesh_, v.dart));
+				phi2_unsew(*p.mesh_, v.dart);
 				if (it < 3)
 					abc[it++] = value<Vec3>(*p.mesh_, p.vertex_position_, v);
 				return true;
@@ -567,13 +569,13 @@ private:
 			float height = sqrt(normal.norm() / 2.0f);
 			normal.normalize();
 
-			Face extruded_face = add_face(m, nVertex, true);
-			Dart to_remove = phi2(m, extruded_face.dart);
+			Face extruded_face = add_face(*p.mesh_, nVertex, true);
+			Dart to_remove = phi2(*p.mesh_, extruded_face.dart);
 			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
-				phi2_unsew(m, v.dart);
+				phi2_unsew(*p.mesh_, v.dart);
 				return true;
 			});
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 
 			it = 0u;
 			foreach_incident_vertex(*p.mesh_, extruded_face, [&](Vertex v) -> bool {
@@ -582,37 +584,41 @@ private:
 				return true;
 			});
 
-			remove_face(static_cast<CMap1&>(m), CMap1::Face(f), false);
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(f), false);
 
 			std::vector<Face> faces_ring;
 			for (int i = 0; i < nVertex; i++)
 			{
-				faces_ring.push_back(add_face(m, 4u, true));
-				to_remove = phi2(m, faces_ring[i].dart);
+				faces_ring.push_back(add_face(*p.mesh_, 4u, true));
+				to_remove = phi2(*p.mesh_, faces_ring[i].dart);
 				foreach_incident_vertex(*p.mesh_, faces_ring[i], [&](Vertex v) -> bool {
-					phi2_unsew(m, v.dart);
+					phi2_unsew(*p.mesh_, v.dart);
 					return true;
 				});
-				remove_face(static_cast<CMap1&>(m), CMap1::Face(to_remove), false);
+				remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
 			}
 
 			Dart next = extruded_face.dart;
 			for (int i = 0; i < nVertex; i++)
 			{
-				set_index<Vertex>(m, faces_ring[i].dart, index_of(m, Vertex(base[i])));
-				set_index<Vertex>(m, phi1(m, faces_ring[i].dart), index_of(m, Vertex(base[(i + 1) % nVertex])));
-				set_index<Vertex>(m, phi1(m, phi1(m, phi1(m, faces_ring[i].dart))), index_of(m, Vertex(next)));
-				next = phi1(m, next);
-				set_index<Vertex>(m, phi1(m, phi1(m, faces_ring[i].dart)), index_of(m, Vertex(next)));
+				set_index<Vertex>(*p.mesh_, faces_ring[i].dart, index_of(*p.mesh_, Vertex(base[i])));
+				set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, faces_ring[i].dart),
+								  index_of(*p.mesh_, Vertex(base[(i + 1) % nVertex])));
+				set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, faces_ring[i].dart))),
+								  index_of(*p.mesh_, Vertex(next)));
+				next = phi1(*p.mesh_, next);
+				set_index<Vertex>(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, faces_ring[i].dart)),
+								  index_of(*p.mesh_, Vertex(next)));
 			}
 
 			next = extruded_face.dart;
 			for (int i = 0; i < nVertex; i++)
 			{
-				phi2_sew(m, faces_ring[i].dart, base[(i + 1) % nVertex]);
-				phi2_sew(m, phi1(m, faces_ring[i].dart), phi1(m, phi1(m, phi1(m, faces_ring[(i + 1) % nVertex].dart))));
-				phi2_sew(m, phi1(m, phi1(m, faces_ring[i].dart)), next);
-				next = phi1(m, next);
+				phi2_sew(*p.mesh_, faces_ring[i].dart, base[(i + 1) % nVertex]);
+				phi2_sew(*p.mesh_, phi1(*p.mesh_, faces_ring[i].dart),
+						 phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, faces_ring[(i + 1) % nVertex].dart))));
+				phi2_sew(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, faces_ring[i].dart)), next);
+				next = phi1(*p.mesh_, next);
 			}
 
 			extruded_faces.push_back(extruded_face);
@@ -874,7 +880,7 @@ protected:
 				ImGui::Separator();
 				ImGui::TextUnformatted("Mesh Tools");
 				if (ImGui::Button("Bevel Mesh"))
-					bevel_mesh(*p.mesh_);
+					bevel_mesh(p);
 
 				ImGui::Separator();
 				int* ptr_sel_cell = reinterpret_cast<int*>(&p.selecting_cell_);
@@ -942,7 +948,7 @@ protected:
 
 						if (update_flag)
 						{
-							translate(*p.mesh_, old_position, position);
+							translate(p, old_position, position);
 						}
 					}
 				}
@@ -995,11 +1001,11 @@ protected:
 
 						if (update_flag)
 						{
-							translate(*p.mesh_, old_position, position);
+							translate(p, old_position, position);
 						}
 
 						if (ImGui::Button("Bevel"))
-							bevel(*p.mesh_);
+							bevel(p);
 					}
 				}
 				else if (p.selecting_cell_ == FaceSelect)
@@ -1049,10 +1055,10 @@ protected:
 						need_update |= update_flag;
 
 						if (update_flag)
-							translate(*p.mesh_, old_position, position);
+							translate(p, old_position, position);
 
 						if (ImGui::Button("Extrude"))
-							extrude(*p.mesh_);
+							extrude(p);
 					}
 				}
 			}
