@@ -486,6 +486,7 @@ private:
 	void bevel_mesh(Parameters& p)
 	{
 		std::vector<Dart> new_faces;
+		std::vector<Edge> edges;
 
 		foreach_cell(*p.mesh_, [&](Face f) {
 			std::vector<Vec3> face_vertices;
@@ -511,6 +512,12 @@ private:
 		});
 
 		foreach_cell(*p.mesh_, [&](Edge e) {
+			edges.push_back(e);
+			return true;
+		});
+
+		for (Edge e : edges)
+		{
 			Dart neighbour = phi2(*p.mesh_, e.dart);
 			phi2_unsew(*p.mesh_, e.dart);
 
@@ -533,13 +540,16 @@ private:
 
 			phi2_sew(*p.mesh_, phi1(*p.mesh_, beveled_face.dart), neighbour);
 			phi2_sew(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, beveled_face.dart))), e.dart);
-
-			return true;
-		});
+		}
 
 		for (Dart d : new_faces)
+		{
 			if (d == phi2(*p.mesh_, d))
+			{
+				std::cout << d << std::endl;
 				close_hole(*p.mesh_, d, true);
+			}
+		}
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
