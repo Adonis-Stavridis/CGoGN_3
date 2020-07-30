@@ -521,7 +521,7 @@ private:
 			Dart neighbour = phi2(*p.mesh_, e.dart);
 			phi2_unsew(*p.mesh_, e.dart);
 
-			Face beveled_face = add_face(*p.mesh_, 4u, true);
+			Face beveled_face = add_face(*p.mesh_, 4u, false);
 			new_faces.push_back(beveled_face.dart);
 			Dart to_remove = phi2(*p.mesh_, beveled_face.dart);
 			foreach_incident_vertex(*p.mesh_, beveled_face, [&](Vertex v) -> bool {
@@ -543,13 +543,8 @@ private:
 		}
 
 		for (Dart d : new_faces)
-		{
 			if (d == phi2(*p.mesh_, d))
-			{
-				std::cout << d << std::endl;
 				close_hole(*p.mesh_, d, true);
-			}
-		}
 
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
