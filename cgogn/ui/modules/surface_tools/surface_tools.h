@@ -507,9 +507,37 @@ private:
 		}
 
 		for (Dart d : new_faces)
+		{
 			if (d == phi2(*p.mesh_, d))
-				close_hole(*p.mesh_, d, true);
+			{
+				std::vector<Dart> to_sew;
+				to_sew.push_back(d);
 
+				Dart next = phi1(*p.mesh_, phi2(*p.mesh_, phi1(*p.mesh_, phi2(*p.mesh_, phi1(*p.mesh_, d)))));
+				while (next != d)
+				{
+					to_sew.push_back(next);
+					next = phi1(*p.mesh_, phi2(*p.mesh_, phi1(*p.mesh_, phi2(*p.mesh_, phi1(*p.mesh_, next)))));
+				}
+				std::reverse(to_sew.begin(), to_sew.end());
+
+				Face hole = add_face(*p.mesh_, to_sew.size(), true);
+				Dart to_remove = phi2(*p.mesh_, hole.dart);
+				foreach_incident_vertex(*p.mesh_, hole, [&](Vertex v) -> bool {
+					phi2_unsew(*p.mesh_, v.dart);
+					return true;
+				});
+				remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
+
+				Dart hole_dart = hole.dart;
+				for (size_t i = 0; i < to_sew.size(); i++)
+				{
+					set_index<Vertex>(*p.mesh_, hole_dart, index_of(*p.mesh_, Vertex(to_sew[i])));
+					phi2_sew(*p.mesh_, hole_dart, to_sew[(i + 1) % to_sew.size()]);
+					hole_dart = phi1(*p.mesh_, hole_dart);
+				}
+			}
+		}
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
 		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 	}
