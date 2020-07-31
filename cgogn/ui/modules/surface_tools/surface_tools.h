@@ -435,8 +435,8 @@ private:
 			close_hole(*p.mesh_, to_sew2, true);
 		}
 
-		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 
 		for (auto& val : dirs)
 		{
@@ -485,7 +485,7 @@ private:
 			Dart neighbour = phi2(*p.mesh_, e.dart);
 			phi2_unsew(*p.mesh_, e.dart);
 
-			Face beveled_face = add_face(*p.mesh_, 4u, false);
+			Face beveled_face = add_face(*p.mesh_, 4u, true);
 			new_faces.push_back(beveled_face.dart);
 			Dart to_remove = phi2(*p.mesh_, beveled_face.dart);
 			foreach_incident_vertex(*p.mesh_, beveled_face, [&](Vertex v) -> bool {
@@ -510,8 +510,8 @@ private:
 			if (d == phi2(*p.mesh_, d))
 				close_hole(*p.mesh_, d, true);
 
-		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 	}
 
 	void extrude(Parameters& p)
@@ -593,8 +593,8 @@ private:
 			extruded_faces.push_back(extruded_face);
 		});
 
-		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
+		mesh_provider_->emit_attribute_changed(selected_mesh_, p.vertex_position_.get());
 
 		for (Face sel : extruded_faces)
 			p.selected_faces_set_->select(sel);
