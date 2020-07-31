@@ -466,7 +466,7 @@ private:
 			for (Vec3 val : face_vertices)
 			{
 				Vec3 scaleVec(centre[0] - val.x(), centre[1] - val.y(), centre[2] - val.z());
-				scaleVec *= 0.4f;
+				scaleVec *= 0.5f;
 				set_index<Vertex>(*p.mesh_, face_dart, new_index<CMap2::Vertex>(*p.mesh_));
 				value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(face_dart)) = val + scaleVec;
 				face_dart = phi1(*p.mesh_, face_dart);
