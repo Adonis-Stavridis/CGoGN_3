@@ -401,21 +401,27 @@ private:
 			value<Vec3>(*p.mesh_, p.vertex_position_, Vertex(next_edges1[0])) += dirs[Dart(val.first).index].first;
 			;
 
-			Dart to_sew1 = next_edges2[0];
-			Dart to_sew2 = next_edges2[1];
+			std::vector<Dart> to_sew1;
+			std::vector<Dart> to_sew2;
 
 			Dart to_sew_face = phi2(*p.mesh_, next_edges2[0]);
 			for (Dart d = phi1(*p.mesh_, to_sew_face); d != to_sew_face; d = phi1(*p.mesh_, d))
 			{
+				to_sew1.push_back(phi2(*p.mesh_, d));
 				phi2_unsew(*p.mesh_, d);
 			}
+			to_sew1.push_back(next_edges2[0]);
+			to_sew1.push_back(phi1(*p.mesh_, bevel_face.dart));
 			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_sew_face), false);
 
 			to_sew_face = phi2(*p.mesh_, next_edges2[1]);
 			for (Dart d = phi1(*p.mesh_, to_sew_face); d != to_sew_face; d = phi1(*p.mesh_, d))
 			{
+				to_sew2.push_back(phi2(*p.mesh_, d));
 				phi2_unsew(*p.mesh_, d);
 			}
+			to_sew2.push_back(phi1(*p.mesh_, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart))));
+			to_sew2.push_back(next_edges2[1]);
 			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_sew_face), false);
 
 			phi2_unsew(*p.mesh_, neighbour);
@@ -431,8 +437,39 @@ private:
 			phi2_sew(*p.mesh_, Dart(val.first), bevel_face.dart);
 			phi2_sew(*p.mesh_, neighbour, phi1(*p.mesh_, phi1(*p.mesh_, bevel_face.dart)));
 
-			close_hole(*p.mesh_, to_sew1, true);
-			close_hole(*p.mesh_, to_sew2, true);
+			Face holes[2];
+			holes[0] = add_face(*p.mesh_, to_sew1.size(), true);
+			holes[1] = add_face(*p.mesh_, to_sew2.size(), true);
+
+			to_remove = phi2(*p.mesh_, holes[0].dart);
+			foreach_incident_vertex(*p.mesh_, holes[0], [&](Vertex v) -> bool {
+				phi2_unsew(*p.mesh_, v.dart);
+				return true;
+			});
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
+
+			to_remove = phi2(*p.mesh_, holes[1].dart);
+			foreach_incident_vertex(*p.mesh_, holes[1], [&](Vertex v) -> bool {
+				phi2_unsew(*p.mesh_, v.dart);
+				return true;
+			});
+			remove_face(static_cast<CMap1&>(*p.mesh_), CMap1::Face(to_remove), false);
+
+			Dart hole_dart = holes[0].dart;
+			for (size_t i = 0; i < to_sew1.size(); i++)
+			{
+				set_index<Vertex>(*p.mesh_, hole_dart, index_of(*p.mesh_, Vertex(to_sew1[i])));
+				phi2_sew(*p.mesh_, hole_dart, to_sew1[(i + 1) % to_sew1.size()]);
+				hole_dart = phi1(*p.mesh_, hole_dart);
+			}
+
+			hole_dart = holes[1].dart;
+			for (size_t i = 0; i < to_sew2.size(); i++)
+			{
+				set_index<Vertex>(*p.mesh_, hole_dart, index_of(*p.mesh_, Vertex(to_sew2[i])));
+				phi2_sew(*p.mesh_, hole_dart, to_sew2[(i + 1) % to_sew2.size()]);
+				hole_dart = phi1(*p.mesh_, hole_dart);
+			}
 		}
 
 		mesh_provider_->emit_connectivity_changed(selected_mesh_);
@@ -563,7 +600,11 @@ private:
 			Vec3 ab = abc[1] - abc[0];
 			Vec3 ac = abc[2] - abc[0];
 			Vec3 normal = ab.cross(ac);
-			float height = sqrt(normal.norm() / 2.0f);
+			float height;
+			if (nVertex > 3)
+				height = sqrt(normal.norm());
+			else
+				height = sqrt(normal.norm() / 2.0f);
 			normal.normalize();
 
 			Face extruded_face = add_face(*p.mesh_, nVertex, true);
